@@ -1,5 +1,9 @@
 use std::fmt;
 
+use backend::gen_square_consts;
+
+gen_square_consts!();
+
 #[repr(usize)]
 enum Piece {
     P,
@@ -11,10 +15,31 @@ enum Piece {
     COUNT,
 }
 
-#[derive(Default)]
 pub struct Board {
     w: [u64; Piece::COUNT as usize],
     b: [u64; Piece::COUNT as usize],
+}
+
+impl Board {
+    pub fn default() -> Self {
+        Self {
+            w: [255u64 << 8, B1 | G1, C1 | F1, A1 | H1, D1, E1],
+            b: [255u64 << (6 * 8), B8 | G8, C8 | F8, A8 | H8, D8, E8],
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn validate(&self) {
+        let mut seen: u64 = 0;
+        for i in 0..Piece::COUNT as usize {
+            debug_assert!(seen & self.w[i] == 0);
+            seen |= self.w[i];
+            debug_assert!(seen & self.b[i] == 0);
+            seen |= self.b[i];
+        }
+    }
+    #[cfg(not(debug_assertions))]
+    pub fn validate(&self) {}
 }
 
 impl fmt::Display for Board {
@@ -39,20 +64,8 @@ impl fmt::Display for Board {
                     else {"."}
                 })?;
             }
+            writeln!(f, "")?;
         }
         Ok(())
     }
-}
-
-impl Board {
-    #[cfg(debug_assertions)]
-    pub fn validate(&self) {
-        let mut join: u64 = std::u64::MAX;
-        for i in 0..Piece::COUNT as usize {
-            join &= self.w[i];
-        }
-        debug_assert!(join == 0)
-    }
-    #[cfg(not(debug_assertions))]
-    pub fn validate(&self) {}
 }
