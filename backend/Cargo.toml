@@ -3,8 +3,7 @@ name = "backend"
 version = "0.1.0"
 edition = "2024"
 
-[lib]
-proc-macro = true
+[build-dependencies]
+proc-macro2 = { version = "1.0.107", default-features = false }
+quote = { version = "1.0.47", default-features = false }
 
-[dependencies]
-quote = "1.0.47"

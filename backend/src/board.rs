@@ -1,8 +1,6 @@
 use std::fmt;
 
-use backend::gen_square_consts;
-
-gen_square_consts!();
+include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
 #[repr(usize)]
 enum Piece {
