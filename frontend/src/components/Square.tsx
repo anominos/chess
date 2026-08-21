@@ -10,6 +10,13 @@ export default function Square({ index, showPiece }: SquareProps) {
 
   return (
     <div
+      onDragOver={e => {
+        e.preventDefault();
+      }}
+      onDrop={e => {
+        e.preventDefault();
+        console.log(e)
+      }}
       className={`flex h-full w-full items-center justify-center ${
         isDark
           ? "bg-slate-700 text-slate-100 dark:bg-slate-700 dark:text-slate-100"
