@@ -19,7 +19,7 @@ fn gen_square_consts() -> TokenStream {
         let value: u64 = 1u64 << i;
         quote! {
             #[allow(dead_code)]
-            const #ident: u64 = #value;
+            pub const #ident: u64 = #value;
         }
     });
     quote! {
@@ -47,6 +47,6 @@ fn gen_knight_moves() -> TokenStream {
     }
     quote! {
         #[allow(dead_code)]
-        const KNIGHT_MOVES: [u64; 64] = [#(#array),*];
+        pub const KNIGHT_MOVES: [u64; 64] = [#(#array),*];
     }
 }

@@ -1,6 +1,5 @@
+use crate::consts::*;
 use std::fmt;
-
-include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
 #[repr(usize)]
 enum Piece {
