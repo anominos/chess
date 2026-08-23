@@ -1,3 +1,8 @@
+use crate::{
+    consts::{BISHOP_MOVES, ROOK_MOVES},
+    move_gen::get_queen_moves,
+};
+
 mod board;
 mod move_gen;
 
@@ -16,9 +21,9 @@ fn print_bitboard(board: u64) {
 }
 
 fn main() {
-    let king: u64 = 1 << 7;
-    let moves = move_gen::get_king_moves(king);
-    print_bitboard(king);
+    let piece: u64 = 1 << 41;
+    let moves = get_queen_moves(piece);
+    print_bitboard(piece);
     println!();
     print_bitboard(moves);
 }

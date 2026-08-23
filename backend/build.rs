@@ -9,6 +9,8 @@ fn main() {
     tokens.extend(gen_square_consts());
     tokens.extend(gen_knight_moves());
     tokens.extend(gen_king_moves());
+    tokens.extend(gen_bishop_moves());
+    tokens.extend(gen_rook_moves());
 
     fs::write(dst_path, tokens.to_string()).unwrap();
     println!("cargo::rerun-if-changed=build.rs");
@@ -70,5 +72,53 @@ fn gen_king_moves() -> TokenStream {
     quote! {
         #[allow(dead_code)]
         pub const KING_MOVES: [u64; 64] = [#(#array),*];
+    }
+}
+
+fn gen_bishop_moves() -> TokenStream {
+    let mut array = [0u64; 64];
+    for bishop in 0usize..64 {
+        let row = (bishop / 8) as i8;
+        let col = (bishop % 8) as i8;
+        let mut board: u64 = 0;
+
+        for (dr, dc) in [(-1, -1), (-1, 1), (1, -1), (1, 1)] {
+            let (mut r, mut c) = (row + dr, col + dc);
+            while (0..8).contains(&r) && (0..8).contains(&c) {
+                board |= 1u64 << (r * 8 + c);
+                r += dr;
+                c += dc;
+            }
+        }
+
+        array[bishop] = board;
+    }
+    quote! {
+        #[allow(dead_code)]
+        pub const BISHOP_MOVES: [u64; 64] = [#(#array),*];
+    }
+}
+
+fn gen_rook_moves() -> TokenStream {
+    let mut array = [0u64; 64];
+    for rook in 0usize..64 {
+        let row = (rook / 8) as i8;
+        let col = (rook % 8) as i8;
+        let mut board: u64 = 0;
+
+        for (dr, dc) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
+            let (mut r, mut c) = (row + dr, col + dc);
+            while (0..8).contains(&r) && (0..8).contains(&c) {
+                board |= 1u64 << (r * 8 + c);
+                r += dr;
+                c += dc;
+            }
+        }
+
+        array[rook] = board;
+    }
+    quote! {
+        #[allow(dead_code)]
+        pub const ROOK_MOVES: [u64; 64] = [#(#array),*];
     }
 }
