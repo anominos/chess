@@ -16,9 +16,9 @@ fn print_bitboard(board: u64) {
 }
 
 fn main() {
-    let knight: u64 = 1 << 59;
-    let moves = move_gen::get_knight_moves(knight);
-    print_bitboard(knight);
+    let king: u64 = 1 << 7;
+    let moves = move_gen::get_king_moves(king);
+    print_bitboard(king);
     println!();
     print_bitboard(moves);
 }
