@@ -7,6 +7,7 @@ fn main() {
     let dst_path = Path::new(&out_dir).join("generated.rs");
     let mut tokens = TokenStream::new();
     tokens.extend(gen_square_consts());
+    tokens.extend(gen_line_consts());
     tokens.extend(gen_knight_moves());
     tokens.extend(gen_king_moves());
     tokens.extend(gen_bishop_moves());
@@ -27,6 +28,31 @@ fn gen_square_consts() -> TokenStream {
     });
     quote! {
         #(#lines)*
+    }
+}
+
+fn gen_line_consts() -> TokenStream {
+    const BASE_ROW: u64 = 0xff;
+    let rows = (0u32..8).map(|i| {
+        let ident = format_ident!("R{}", i + 1);
+        let row_val: u64 = BASE_ROW << (i * 8);
+        quote! {
+            #[allow(dead_code)]
+            pub const #ident: u64 = #row_val;
+        }
+    });
+    let base_col: u64 = (0..8).fold(0, |acc, x| acc | (1 << (x * 8)));
+    let cols = (0..8).map(|i| {
+        let ident = format_ident!("C{}", (b'A' + i) as char);
+        let col_val: u64 = base_col << i;
+        quote! {
+            #[allow(dead_code)]
+            pub const #ident: u64 = #col_val;
+        }
+    });
+    quote! {
+        #(#rows)*
+        #(#cols)*
     }
 }
 
