@@ -101,8 +101,14 @@ fn gen_king_moves() -> TokenStream {
     }
 }
 
+const R1: u64 = 0x00000000000000ffu64;
+const CA: u64 = 0x0101010101010101u64;
+const R8: u64 = R1 << (8 * 7);
+const CH: u64 = CA << 7;
+
 fn gen_bishop_moves() -> TokenStream {
-    let mut array = [0u64; 64];
+    let mut moves = [0u64; 64];
+    let mut relevancy = [0u64; 64];
     for bishop in 0usize..64 {
         let row = (bishop / 8) as i8;
         let col = (bishop % 8) as i8;
@@ -117,16 +123,20 @@ fn gen_bishop_moves() -> TokenStream {
             }
         }
 
-        array[bishop] = board;
+        moves[bishop] = board;
+        relevancy[bishop] = board & !(R1 | R8 | CA | CH);
     }
     quote! {
         #[allow(dead_code)]
-        pub const BISHOP_MOVES: [u64; 64] = [#(#array),*];
+        pub const BISHOP_MOVES: [u64; 64] = [#(#moves),*];
+        #[allow(dead_code)]
+        pub const BISHOP_RELEVANCY: [u64; 64] = [#(#relevancy),*];
     }
 }
 
 fn gen_rook_moves() -> TokenStream {
-    let mut array = [0u64; 64];
+    let mut moves = [0u64; 64];
+    let mut relevancy = [0u64; 64];
     for rook in 0usize..64 {
         let row = (rook / 8) as i8;
         let col = (rook % 8) as i8;
@@ -141,10 +151,18 @@ fn gen_rook_moves() -> TokenStream {
             }
         }
 
-        array[rook] = board;
+        moves[rook] = board;
+        // Filter out edges unless rook is on that edge
+        relevancy[rook] = board
+            & !([R1, R8, CA, CH]
+                .into_iter()
+                .filter(|&edge| (1 << rook) & edge == 0)
+                .fold(0, |a, b| a | b));
     }
     quote! {
         #[allow(dead_code)]
-        pub const ROOK_MOVES: [u64; 64] = [#(#array),*];
+        pub const ROOK_MOVES: [u64; 64] = [#(#moves),*];
+        #[allow(dead_code)]
+        pub const ROOK_RELEVANCY: [u64; 64] = [#(#relevancy),*];
     }
 }
