@@ -7,10 +7,10 @@ use std::{
     path::PathBuf,
     str::FromStr,
     sync::{
-        Arc, LazyLock,
-        atomic::{AtomicBool, Ordering},
+        Arc, LazyLock, Mutex,
+        atomic::{AtomicBool, AtomicU64, Ordering},
     },
-    time::Instant,
+    time,
 };
 use syn;
 
@@ -68,88 +68,112 @@ struct Magic {
 }
 
 fn main() {
-    let mut c = 0;
-    let now = Instant::now();
-
-    let (mut b_magic, mut r_magic) = load_magics()
+    let (b_magic, r_magic) = load_magics()
         .unwrap_or_else(|_| (std::array::from_fn(|_| None), std::array::from_fn(|_| None)));
+
+    let b_magic = Arc::new(b_magic.map(|x| Mutex::new(x)));
+    let r_magic = Arc::new(r_magic.map(|x| Mutex::new(x)));
 
     let running = Arc::new(AtomicBool::new(true));
     ctrlc::set_handler({
         let running = running.clone();
         move || {
-            running.store(false, Ordering::SeqCst);
+            running.store(false, Ordering::Relaxed);
         }
     })
     .unwrap();
 
-    while running.load(Ordering::SeqCst) {
-        let magic = rand::random::<u64>() & rand::random::<u64>() & rand::random::<u64>();
-        for sq in 0..64 {
-            // ROOK
-            let (cur_len, cur_shift) = if let Some(magic) = &r_magic[sq] {
-                (magic.array.len(), magic.shift)
-            } else {
-                (1 << SHIFT_START, SHIFT_START)
-            };
-            for shift in cur_shift..=61 {
-                if let Some(arr) = check_magic(magic, sq, shift, true) {
-                    let trimmed_arr = trim_trailing_nones(arr);
-                    if trimmed_arr.len() < cur_len {
-                        r_magic[sq] = Some(Magic {
-                            magic: magic,
-                            mask: ROOK_RELEVANCY[sq],
-                            shift: shift,
-                            array: trimmed_arr,
-                        });
+    let total_tries = Arc::new(AtomicU64::new(0));
+
+    let num_threads = std::thread::available_parallelism().unwrap().get();
+
+    let threads: Vec<_> = (0..num_threads)
+        .map(|thread_num| {
+            let running = Arc::clone(&running);
+            let r_magic = Arc::clone(&r_magic);
+            let b_magic = Arc::clone(&b_magic);
+            let total_tries = Arc::clone(&total_tries);
+            let now = time::Instant::now();
+            std::thread::spawn(move || {
+                let mut c = 0;
+                while running.load(Ordering::Relaxed) {
+                    let magic =
+                        rand::random::<u64>() & rand::random::<u64>() & rand::random::<u64>();
+                    for sq in 0..64 {
+                        for is_rook in [true, false] {
+                            // acquire lock to read cur len and shift, and immediately drop lock
+                            // use these values as estimates, a proper compare is done when a better value is found
+                            let magic_array = if is_rook { &r_magic } else { &b_magic };
+                            let (cur_len, cur_shift) =
+                                if let Some(magic) = &*magic_array[sq].lock().unwrap() {
+                                    (magic.array.len(), magic.shift)
+                                } else {
+                                    (1 << SHIFT_START, 64 - SHIFT_START)
+                                };
+                            for shift in cur_shift..=61 {
+                                if let Some(arr) = check_magic(magic, sq, shift, is_rook) {
+                                    let trimmed_arr = trim_trailing_nones(arr);
+                                    if trimmed_arr.len() < cur_len {
+                                        // Array is probably better, acquire lock to check and write to arr
+                                        // also update cur_len,  but cur_shift can be left unchanged because its only used in loop
+                                        let mut entry = magic_array[sq].lock().unwrap();
+                                        if entry
+                                            .as_ref()
+                                            .is_none_or(|m| trimmed_arr.len() < m.array.len())
+                                        {
+                                            *entry = Some(Magic {
+                                                magic: magic,
+                                                mask: if is_rook {
+                                                    ROOK_RELEVANCY
+                                                } else {
+                                                    BISHOP_RELEVANCY
+                                                }[sq],
+                                                shift: shift,
+                                                array: trimmed_arr,
+                                            });
+                                        }
+                                    }
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
                     }
-                } else {
-                    break;
-                }
-            }
-            // BISHOP
-            let (cur_len, cur_shift) = if let Some(magic) = &b_magic[sq] {
-                (magic.array.len(), magic.shift)
-            } else {
-                (1 << SHIFT_START, SHIFT_START)
-            };
-            for shift in cur_shift..=61 {
-                if let Some(arr) = check_magic(magic, sq, shift, false) {
-                    let trimmed_arr = trim_trailing_nones(arr);
-                    if trimmed_arr.len() < cur_len {
-                        b_magic[sq] = Some(Magic {
-                            magic: magic,
-                            mask: BISHOP_RELEVANCY[sq],
-                            shift: shift,
-                            array: trimmed_arr,
-                        });
+                    c += 1;
+                    if c % 2000 == 0 {
+                        total_tries.fetch_add(2000, Ordering::Relaxed);
+                        if thread_num == 1 {
+                            let r_arr_len: usize = r_magic
+                                .iter()
+                                .map(|x| x.lock().unwrap().as_ref().map_or(0, |m| m.array.len()))
+                                .sum();
+                            let b_arr_len: usize = b_magic
+                                .iter()
+                                .map(|x| x.lock().unwrap().as_ref().map_or(0, |m| m.array.len()))
+                                .sum();
+                            let elapsed = now.elapsed().as_millis() as f64 / 1000.0;
+
+                            println!(
+                                "Try {}, r={r_arr_len}, b={b_arr_len}, time={elapsed:.2}s",
+                                total_tries.load(Ordering::Relaxed)
+                            )
+                        }
                     }
-                } else {
-                    break;
                 }
-            }
-        }
-        if c % 1000 == 0 {
-            let nones = r_magic
-                .iter()
-                .chain(b_magic.iter())
-                .filter(|x| x.is_none())
-                .count();
-            let r_arr_len: usize = r_magic
-                .iter()
-                .map(|x| x.as_ref().map_or(0, |m| m.array.len()))
-                .sum();
-            let b_arr_len: usize = b_magic
-                .iter()
-                .map(|x| x.as_ref().map_or(0, |m| m.array.len()))
-                .sum();
-            let elapsed = now.elapsed().as_millis();
-            println!(
-                "Try: {c}, nones={nones}, r_size={r_arr_len}, b_size={b_arr_len}, ran for={elapsed}"
-            );
-        }
-        c += 1;
+            })
+        })
+        .collect();
+
+    for t in threads {
+        t.join().unwrap();
     }
+
+    let b_magic = Arc::into_inner(b_magic)
+        .unwrap()
+        .map(|m| m.into_inner().unwrap());
+    let r_magic = Arc::into_inner(r_magic)
+        .unwrap()
+        .map(|m| m.into_inner().unwrap());
     write_magics(b_magic, r_magic).expect("Write failed, missing values in magic");
 }
 
