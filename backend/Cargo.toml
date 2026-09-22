@@ -7,3 +7,11 @@ edition = "2024"
 proc-macro2 = { version = "1.0.107", default-features = false }
 quote = { version = "1.0.47", default-features = false }
 
+[dependencies]
+ctrlc = "3.5.2"
+prettyplease = "0.3.0"
+proc-macro2 = "1.0.107"
+quote = "1.0.47"
+rand = "0.10.3"
+syn = "3.0.6"
+
