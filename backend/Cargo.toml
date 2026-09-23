@@ -2,6 +2,7 @@
 name = "backend"
 version = "0.1.0"
 edition = "2024"
+default-run = "backend"
 
 [build-dependencies]
 proc-macro2 = { version = "1.0.107", default-features = false }

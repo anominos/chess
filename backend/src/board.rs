@@ -2,19 +2,30 @@ use crate::consts::*;
 use std::fmt;
 
 #[repr(usize)]
-enum Piece {
+#[derive(Clone, Copy)]
+pub enum Piece {
     P,
     N,
     B,
     R,
     Q,
     K,
-    COUNT,
+}
+impl Piece {
+    pub const COUNT: usize = 6;
+    pub const PIECES: [Piece; 6] = [Piece::P, Piece::B, Piece::N, Piece::R, Piece::Q, Piece::K];
+}
+
+#[repr(usize)]
+#[derive(PartialEq, Clone, Copy)]
+pub enum Colour {
+    B,
+    W,
 }
 
 pub struct Board {
-    w: [u64; Piece::COUNT as usize],
-    b: [u64; Piece::COUNT as usize],
+    w: [u64; Piece::COUNT],
+    b: [u64; Piece::COUNT],
 }
 
 impl Board {
@@ -25,10 +36,39 @@ impl Board {
         }
     }
 
+    pub fn white(&self) -> u64 {
+        (0..Piece::COUNT).fold(0, |acc, x| acc | self.w[x])
+    }
+
+    pub fn black(&self) -> u64 {
+        (0..Piece::COUNT).fold(0, |acc, x| acc | self.b[x])
+    }
+
+    pub fn occupancy(&self) -> u64 {
+        self.white() | self.black()
+    }
+
+    pub fn squares_by_piece(&self, piece: &Piece, colour: &Colour) -> impl Iterator<Item = u64> {
+        let mut bitboard = if *colour == Colour::W {
+            &self.w
+        } else {
+            &self.b
+        }[*piece as usize];
+        std::iter::from_fn(move || {
+            if bitboard == 0 {
+                None
+            } else {
+                let bit = bitboard & bitboard.wrapping_neg();
+                bitboard &= bitboard - 1;
+                Some(bit)
+            }
+        })
+    }
+
     #[cfg(debug_assertions)]
     pub fn validate(&self) {
         let mut seen: u64 = 0;
-        for i in 0..Piece::COUNT as usize {
+        for i in 0..Piece::COUNT {
             debug_assert!(seen & self.w[i] == 0);
             seen |= self.w[i];
             debug_assert!(seen & self.b[i] == 0);
