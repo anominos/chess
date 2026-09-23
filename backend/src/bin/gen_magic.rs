@@ -95,10 +95,10 @@ fn main() {
             let total_tries = Arc::clone(&total_tries);
             let now = time::Instant::now();
             std::thread::spawn(move || {
+                let mut rng = rand::rng();
                 let mut c = 0;
                 while running.load(Ordering::Relaxed) {
-                    let magic =
-                        rand::random::<u64>() & rand::random::<u64>() & rand::random::<u64>();
+                    let magic = gen_rng(&mut rng);
                     for sq in 0..64 {
                         for is_rook in [true, false] {
                             // acquire lock to read cur len and shift, and immediately drop lock
@@ -131,6 +131,11 @@ fn main() {
                                                 shift: shift,
                                                 array: trimmed_arr,
                                             });
+                                            println!(
+                                                "Better magic found: popcount {} sq {}",
+                                                magic.count_ones(),
+                                                sq
+                                            );
                                         }
                                     }
                                 } else {
@@ -175,6 +180,14 @@ fn main() {
         .unwrap()
         .map(|m| m.into_inner().unwrap());
     write_magics(b_magic, r_magic).expect("Write failed, missing values in magic");
+}
+
+fn gen_rng(rng: &mut impl rand::Rng) -> u64 {
+    let bits =
+        (rand::random_range(0..64) + rand::random_range(0..64) + rand::random_range(0..64)) / 3;
+    rand::seq::index::sample(rng, 64, bits)
+        .into_iter()
+        .fold(0u64, |acc, bit| acc | (1u64 << bit))
 }
 
 fn check_magic(
