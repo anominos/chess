@@ -1,7 +1,7 @@
 use crate::board;
 use crate::consts::*;
 
-fn gen_pseudolegal_moves(board: board::Board, turn: board::Colour) -> [u64; 64] {
+pub fn gen_pseudolegal_moves(board: board::Board, turn: board::Colour) -> [u64; 64] {
     let mut moves = [0; 64];
     for p in board::Piece::PIECES {
         for sq in board.squares_by_piece(&p, &turn) {
@@ -36,13 +36,15 @@ fn get_king_moves(piece: u64) -> u64 {
 fn get_bishop_moves(piece: u64, board: &board::Board) -> u64 {
     let piece_idx = piece.trailing_zeros() as usize;
     let magic = &BISHOP_MAGICS[piece_idx];
-    magic.array[((board.occupancy() * magic.magic) >> magic.shift) as usize]
+    magic.array
+        [(((board.occupancy() & magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
 }
 
 fn get_rook_moves(piece: u64, board: &board::Board) -> u64 {
     let piece_idx = piece.trailing_zeros() as usize;
     let magic = &ROOK_MAGICS[piece_idx];
-    magic.array[((board.occupancy() * magic.magic) >> magic.shift) as usize]
+    magic.array
+        [(((board.occupancy() & magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
 }
 
 fn get_queen_moves(piece: u64, board: &board::Board) -> u64 {
