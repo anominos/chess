@@ -13,7 +13,7 @@ pub enum Piece {
 }
 impl Piece {
     pub const COUNT: usize = 6;
-    pub const PIECES: [Piece; 6] = [Piece::P, Piece::B, Piece::N, Piece::R, Piece::Q, Piece::K];
+    pub const PIECES: [Piece; 6] = [Piece::P, Piece::N, Piece::B, Piece::R, Piece::Q, Piece::K];
 }
 
 #[repr(usize)]
@@ -24,8 +24,8 @@ pub enum Colour {
 }
 
 pub struct Board {
-    w: [u64; Piece::COUNT],
-    b: [u64; Piece::COUNT],
+    pub w: [u64; Piece::COUNT],
+    pub b: [u64; Piece::COUNT],
 }
 
 impl Board {
