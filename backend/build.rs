@@ -11,6 +11,7 @@ fn main() {
     tokens.extend(gen_king_moves());
     tokens.extend(gen_bishop_moves());
     tokens.extend(gen_rook_moves());
+    tokens.extend(gen_pawns());
 
     fs::write(dst_path, tokens.to_string()).unwrap();
     println!("cargo::rerun-if-changed=build.rs");
@@ -138,5 +139,60 @@ fn gen_rook_moves() -> TokenStream {
         pub const ROOK_MOVES: [u64; 64] = [#(#moves),*];
         #[allow(dead_code)]
         pub const ROOK_RELEVANCY: [u64; 64] = [#(#relevancy),*];
+    }
+}
+
+fn gen_pawns() -> TokenStream {
+    // Black and white have different moves,
+    // and we also need separate capture arrays
+    let mut white_moves = [0u64; 64];
+    let mut white_captures = [0u64; 64];
+
+    let mut black_moves = [0u64; 64];
+    let mut black_captures = [0u64; 64];
+
+    for col in 1..7 {
+        for row in 0..8 {
+            let sq_idx = col * 8 + row;
+            let sq: u64 = 1 << sq_idx;
+            // white
+            let mut mv: u64 = sq << 8;
+            if col == 1 {
+                mv |= sq << 16;
+            }
+            white_moves[sq_idx] = mv;
+            let mut captures: u64 = 0;
+            if row != 0 {
+                captures |= sq << 7;
+            }
+            if row != 7 {
+                captures |= sq << 9;
+            }
+            white_captures[sq_idx] = captures;
+            // black
+            let mut mv: u64 = sq >> 8;
+            if col == 6 {
+                mv |= sq >> 16;
+            }
+            black_moves[sq_idx] = mv;
+            let mut captures: u64 = 0;
+            if row != 0 {
+                captures |= sq >> 9;
+            }
+            if row != 7 {
+                captures |= sq >> 7;
+            }
+            black_captures[sq_idx] = captures;
+        }
+    }
+    quote! {
+        #[allow(dead_code)]
+        pub const WHITE_PAWN_MOVES: [u64; 64] = [#(#white_moves),*];
+        #[allow(dead_code)]
+        pub const WHITE_PAWN_CAPTURES: [u64; 64] = [#(#white_captures),*];
+        #[allow(dead_code)]
+        pub const BLACK_PAWN_MOVES: [u64; 64] = [#(#black_moves),*];
+        #[allow(dead_code)]
+        pub const BLACK_PAWN_CAPTURES: [u64; 64] = [#(#black_captures),*];
     }
 }
