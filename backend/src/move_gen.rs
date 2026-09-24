@@ -37,14 +37,14 @@ fn get_bishop_moves(piece: u64, board: &board::Board) -> u64 {
     let piece_idx = piece.trailing_zeros() as usize;
     let magic = &BISHOP_MAGICS[piece_idx];
     magic.array
-        [(((board.occupancy() & magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
+        [(((board.occupancy() | magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
 }
 
 fn get_rook_moves(piece: u64, board: &board::Board) -> u64 {
     let piece_idx = piece.trailing_zeros() as usize;
     let magic = &ROOK_MAGICS[piece_idx];
     magic.array
-        [(((board.occupancy() & magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
+        [(((board.occupancy() | magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
 }
 
 fn get_queen_moves(piece: u64, board: &board::Board) -> u64 {

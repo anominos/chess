@@ -123,7 +123,7 @@ fn main() {
                                         {
                                             *entry = Some(Magic {
                                                 magic: magic,
-                                                mask: if is_rook {
+                                                mask: !if is_rook {
                                                     ROOK_RELEVANCY
                                                 } else {
                                                     BISHOP_RELEVANCY
@@ -201,9 +201,14 @@ fn check_magic(
     } else {
         &*BISHOP_BLOCKER_ATTACKS
     };
+    let relevancy = if is_rook {
+        ROOK_RELEVANCY
+    } else {
+        BISHOP_RELEVANCY
+    }[square];
     let mut array: [Option<u64>; MAX_ARR_SIZE] = [None; MAX_ARR_SIZE];
     for (blocker, attack) in &blocker_attacks[square] {
-        let hash = (blocker.wrapping_mul(magic) >> shift) as usize;
+        let hash = ((blocker | !relevancy).wrapping_mul(magic) >> shift) as usize;
         if let Some(other_attack) = array[hash] {
             if other_attack != *attack {
                 return None;
