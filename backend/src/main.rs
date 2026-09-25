@@ -5,16 +5,8 @@ fn main() {
     let board = board::Board::default();
     let turn = board::Colour::W;
 
-    let moves = move_gen::gen_pseudolegal_moves(&board, &turn);
-    for sq in 0..64 {
-        if &board.white() & (1 << sq) != 0 {
-            print_bitboard(&(1 << sq));
-            println!();
-            print_bitboard(&moves[sq]);
-            println!();
-            println!();
-        }
-    }
+    let board = board.make_move(1 << 10, 1 << (10 + 16));
+    println!("{}", board);
     println!("Hello, World!");
 }
 

@@ -23,6 +23,7 @@ pub enum Colour {
     W,
 }
 
+#[derive(Clone)]
 pub struct Board {
     pub w: [u64; Piece::COUNT],
     pub b: [u64; Piece::COUNT],
@@ -48,11 +49,30 @@ impl Board {
         self.white() | self.black()
     }
 
-    pub fn squares_by_piece(&self, piece: &Piece, colour: &Colour) -> impl Iterator<Item = u64> {
-        let mut bitboard = if *colour == Colour::W {
-            &self.w
+    pub fn make_move(&self, from: u64, to: u64) -> Self {
+        let mut new_board = self.clone();
+        let (fr_side, to_side) = if from & self.white() != 0 {
+            (&mut new_board.w, &mut new_board.b)
+        } else if from & self.black() != 0 {
+            (&mut new_board.b, &mut new_board.w)
         } else {
-            &self.b
+            panic!("From not occupied");
+        };
+        if let Some(b) = fr_side.iter_mut().find(|b| **b & from != 0) {
+            *b = (*b & !from) | to;
+        }
+        if let Some(b) = to_side.iter_mut().find(|b| **b & to != 0) {
+            // capture
+            *b = *b & !to;
+        }
+        self.validate();
+        new_board
+    }
+
+    pub fn squares_by_piece(&self, piece: &Piece, colour: &Colour) -> impl Iterator<Item = u64> {
+        let mut bitboard = match colour {
+            Colour::W => &self.w,
+            Colour::B => &self.b,
         }[*piece as usize];
         std::iter::from_fn(move || {
             if bitboard == 0 {
