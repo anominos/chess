@@ -64,12 +64,29 @@ fn gen_pseudolegal_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64
 }
 
 fn get_pawn_moves(piece: u64, colour: &board::Colour, board: &board::Board) -> u64 {
-    let (&moves, &captures) = match colour {
-        board::Colour::W => (&WHITE_PAWN_MOVES, &WHITE_PAWN_CAPTURES),
-        board::Colour::B => (&BLACK_PAWN_MOVES, &BLACK_PAWN_CAPTURES),
+    let &captures = match colour {
+        board::Colour::W => &WHITE_PAWN_CAPTURES,
+        board::Colour::B => &BLACK_PAWN_CAPTURES,
     };
     let sq_idx = piece.trailing_zeros() as usize;
-    moves[sq_idx] | (captures[sq_idx] & board.occupancy())
+    let row = sq_idx / 8;
+    let mut moves = 0;
+    if (1..7).contains(&row) {
+        moves = match colour {
+            board::Colour::W => piece << 8,
+            board::Colour::B => piece >> 8,
+        } & !board.occupancy();
+    }
+    if moves != 0 && *colour == board::Colour::W && row == 1 {
+        // no piece in the way, we are white and we are on the 2nd row,
+        // add jump
+        moves |= piece << 16 & !board.occupancy();
+    } else if moves != 0 && *colour == board::Colour::B && row == 6 {
+        // no piece in the way, we are black and we are on the 7th row,
+        // add jump
+        moves |= piece >> 16 & !board.occupancy();
+    }
+    moves | (captures[sq_idx] & board.occupancy())
 }
 
 fn get_knight_moves(piece: u64) -> u64 {
