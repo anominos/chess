@@ -22,6 +22,14 @@ pub enum Colour {
     B,
     W,
 }
+impl Colour {
+    pub fn other(&self) -> Self {
+        match self {
+            Colour::B => Colour::W,
+            Colour::W => Colour::B,
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct Board {
