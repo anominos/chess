@@ -36,6 +36,13 @@ fn main() {
                 turn = turn.other();
                 println!("{}", board);
             }
+            "perft" => {
+                println!("Doing perft");
+                for i in 1..10 {
+                    let count = perft(&board, &turn, i);
+                    println!("{} -> {}", i, count);
+                }
+            }
             _ => println!("invalid command"),
         }
     }
