@@ -112,7 +112,7 @@ fn get_pawn_moves(piece: u64, colour: &board::Colour, board: &board::Board) -> u
         // add jump
         moves |= piece >> 16 & !board.occupancy();
     }
-    moves | (captures[sq_idx] & board.occupancy())
+    moves | (captures[sq_idx] & (board.occupancy() | board.en_passant))
 }
 
 fn get_knight_moves(piece: u64) -> u64 {

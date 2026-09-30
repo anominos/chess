@@ -36,6 +36,7 @@ pub struct Board {
     pub w: [u64; Piece::COUNT],
     pub b: [u64; Piece::COUNT],
     pub castle_rights: u8,
+    pub en_passant: u64, // if last move was pawn jump, mark intermediate here
 }
 
 impl Board {
@@ -49,6 +50,7 @@ impl Board {
             w: [255u64 << 8, B1 | G1, C1 | F1, A1 | H1, D1, E1],
             b: [255u64 << (6 * 8), B8 | G8, C8 | F8, A8 | H8, D8, E8],
             castle_rights: Self::WQ | Self::WK | Self::BQ | Self::BK,
+            en_passant: 0u64,
         }
     }
 
@@ -98,14 +100,29 @@ impl Board {
                 }
             }
         }
+        // Check for en passant marking
+        new_board.en_passant = 0;
+        if from & fr_side[Piece::P as usize] != 0 {
+            if to == from << 16 {
+                new_board.en_passant = from << 8;
+            } else if to == from >> 16 {
+                new_board.en_passant = from >> 8;
+            }
+        }
+
         if let Some(b) = fr_side.iter_mut().find(|b| **b & from != 0) {
             *b = (*b & !from) | to;
+        }
+        // check for en_passant capture
+        if to == self.en_passant {
+            // can remove both since the other square must be empty (opp just moved from there)
+            fr_opp[Piece::P as usize] &= !(self.en_passant << 8 | self.en_passant >> 8);
         }
         if let Some(b) = fr_opp.iter_mut().find(|b| **b & to != 0) {
             // capture
             *b = *b & !to;
         }
-        self.validate();
+        new_board.validate();
         new_board
     }
 
@@ -134,6 +151,7 @@ impl Board {
             debug_assert!(seen & self.b[i] == 0);
             seen |= self.b[i];
         }
+        debug_assert!(seen & self.en_passant == 0);
     }
     #[cfg(not(debug_assertions))]
     pub fn validate(&self) {}
