@@ -21,6 +21,32 @@ pub fn gen_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
             pseudo[sq] &= !to;
         }
     }
+    // Invalidate castle if we moved through check (check if the adjacent square is still valid)
+    match turn {
+        board::Colour::W => {
+            if board.w[board::Piece::K as usize] == E1 {
+                let k_idx = E1.trailing_zeros() as usize;
+                if (pseudo[k_idx] & C1 != 0) && (pseudo[k_idx] & D1 == 0) {
+                    pseudo[k_idx] &= !C1;
+                }
+                if (pseudo[k_idx] & G1 != 0) && (pseudo[k_idx] & F1 == 0) {
+                    pseudo[k_idx] &= !G1;
+                }
+            }
+        }
+        board::Colour::B => {
+            if board.w[board::Piece::K as usize] == E8 {
+                let k_idx = E8.trailing_zeros() as usize;
+                if (pseudo[k_idx] & C8 != 0) && (pseudo[k_idx] & D8 == 0) {
+                    pseudo[k_idx] &= !C8;
+                }
+                if (pseudo[k_idx] & G8 != 0) && (pseudo[k_idx] & F8 == 0) {
+                    pseudo[k_idx] &= !G8;
+                }
+            }
+        }
+    };
+
     pseudo
 }
 
@@ -50,7 +76,7 @@ fn gen_pseudolegal_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64
                 board::Piece::N => get_knight_moves(sq),
                 board::Piece::R => get_rook_moves(sq, &board),
                 board::Piece::Q => get_queen_moves(sq, &board),
-                board::Piece::K => get_king_moves(sq),
+                board::Piece::K => get_king_moves(sq, &turn, &board),
             };
             // filter out self captures
             let exclude = match turn {
@@ -93,8 +119,29 @@ fn get_knight_moves(piece: u64) -> u64 {
     KNIGHT_MOVES[piece.trailing_zeros() as usize]
 }
 
-fn get_king_moves(piece: u64) -> u64 {
-    KING_MOVES[piece.trailing_zeros() as usize]
+fn get_king_moves(piece: u64, turn: &board::Colour, board: &board::Board) -> u64 {
+    // Castling moves
+    let slide_moves = get_rook_moves(piece, board);
+    let mut castle_moves = 0u64;
+    match turn {
+        board::Colour::W => {
+            if (board.castle_rights & board::Board::WQ) != 0 && (slide_moves & A1) != 0 {
+                castle_moves |= C1;
+            }
+            if (board.castle_rights & board::Board::WK) != 0 && (slide_moves & H1) != 0 {
+                castle_moves |= G1;
+            }
+        }
+        board::Colour::B => {
+            if (board.castle_rights & board::Board::BQ) != 0 && (slide_moves & A8) != 0 {
+                castle_moves |= C8;
+            }
+            if (board.castle_rights & board::Board::BK) != 0 && (slide_moves & H8) != 0 {
+                castle_moves |= G8;
+            }
+        }
+    }
+    KING_MOVES[piece.trailing_zeros() as usize] | castle_moves
 }
 
 fn get_bishop_moves(piece: u64, board: &board::Board) -> u64 {

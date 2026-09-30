@@ -35,13 +35,20 @@ impl Colour {
 pub struct Board {
     pub w: [u64; Piece::COUNT],
     pub b: [u64; Piece::COUNT],
+    pub castle_rights: u8,
 }
 
 impl Board {
+    pub const WQ: u8 = 1u8 << 0;
+    pub const WK: u8 = 1u8 << 1;
+    pub const BQ: u8 = 1u8 << 2;
+    pub const BK: u8 = 1u8 << 3;
+
     pub fn default() -> Self {
         Self {
             w: [255u64 << 8, B1 | G1, C1 | F1, A1 | H1, D1, E1],
             b: [255u64 << (6 * 8), B8 | G8, C8 | F8, A8 | H8, D8, E8],
+            castle_rights: Self::WQ | Self::WK | Self::BQ | Self::BK,
         }
     }
 
@@ -59,17 +66,42 @@ impl Board {
 
     pub fn make_move(&self, from: u64, to: u64) -> Self {
         let mut new_board = self.clone();
-        let (fr_side, to_side) = if from & self.white() != 0 {
+        new_board.castle_rights &= !match from {
+            E1 => Board::WQ | Board::WK,
+            A1 => Board::WQ,
+            H1 => Board::WK,
+            E8 => Board::BQ | Board::BK,
+            A8 => Board::BQ,
+            H8 => Board::BK,
+            _ => 0,
+        };
+        let (fr_side, fr_opp) = if from & self.white() != 0 {
             (&mut new_board.w, &mut new_board.b)
         } else if from & self.black() != 0 {
             (&mut new_board.b, &mut new_board.w)
         } else {
             panic!("From not occupied");
         };
+        // Check for castling
+        if from == fr_side[Piece::K as usize] {
+            if from == E1 {
+                if to == C1 {
+                    fr_side[Piece::R as usize] = fr_side[Piece::R as usize] & !A1 | D1;
+                } else if to == G1 {
+                    fr_side[Piece::R as usize] = fr_side[Piece::R as usize] & !H1 | F1;
+                }
+            } else if from == E8 {
+                if to == C8 {
+                    fr_side[Piece::R as usize] = fr_side[Piece::R as usize] & !A8 | D8;
+                } else if to == G8 {
+                    fr_side[Piece::R as usize] = fr_side[Piece::R as usize] & !H8 | F8;
+                }
+            }
+        }
         if let Some(b) = fr_side.iter_mut().find(|b| **b & from != 0) {
             *b = (*b & !from) | to;
         }
-        if let Some(b) = to_side.iter_mut().find(|b| **b & to != 0) {
+        if let Some(b) = fr_opp.iter_mut().find(|b| **b & to != 0) {
             // capture
             *b = *b & !to;
         }
