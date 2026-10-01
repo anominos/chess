@@ -114,7 +114,7 @@ impl Board {
             *b = (*b & !from) | to;
         }
         // check for en_passant capture
-        if to == self.en_passant {
+        if (from & fr_side[Piece::P as usize]) != 0 && to == self.en_passant {
             // can remove both since the other square must be empty (opp just moved from there)
             fr_opp[Piece::P as usize] &= !(self.en_passant << 8 | self.en_passant >> 8);
         }
