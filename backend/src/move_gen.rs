@@ -68,6 +68,10 @@ pub fn iter_moves(moves: &[u64; 64]) -> impl Iterator<Item = (u64, u64)> {
 
 fn gen_pseudolegal_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
     let mut moves = [0; 64];
+    let exclude = match turn {
+        board::Colour::W => board.white(),
+        board::Colour::B => board.black(),
+    };
     for p in board::Piece::PIECES {
         for sq in board.squares_by_piece(&p, &turn) {
             let possible_moves = match p {
@@ -79,10 +83,6 @@ fn gen_pseudolegal_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64
                 board::Piece::K => get_king_moves(sq, &turn, &board),
             };
             // filter out self captures
-            let exclude = match turn {
-                board::Colour::W => board.white(),
-                board::Colour::B => board.black(),
-            };
             moves[sq.trailing_zeros() as usize] = possible_moves & !exclude;
         }
     }
@@ -90,7 +90,7 @@ fn gen_pseudolegal_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64
 }
 
 fn get_pawn_moves(piece: u64, colour: &board::Colour, board: &board::Board) -> u64 {
-    let &captures = match colour {
+    let captures = match colour {
         board::Colour::W => &WHITE_PAWN_CAPTURES,
         board::Colour::B => &BLACK_PAWN_CAPTURES,
     };
