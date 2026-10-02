@@ -39,8 +39,9 @@ fn main() {
             "perft" => {
                 println!("Doing perft");
                 for i in 1..10 {
+                    let start = std::time::Instant::now();
                     let count = perft(&board, &turn, i);
-                    println!("{} -> {}", i, count);
+                    println!("{} -> {}: {:#?}", i, count, start.elapsed());
                 }
             }
             _ => println!("invalid command"),
