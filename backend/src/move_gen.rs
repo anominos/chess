@@ -1,47 +1,54 @@
 use crate::board;
 use crate::consts::*;
 
-pub fn gen_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
+struct Move {
+    from: u64,
+    tos: u64,
+}
+
+pub fn gen_moves(board: &board::Board, turn: &board::Colour) -> Vec<Move> {
     let mut pseudo = gen_pseudolegal_moves(board, turn);
     // Make sure the move doesn't leave the king in check
-    for (from, to) in iter_moves(&pseudo.clone()) {
-        let post_move = board.make_move(from, to);
-        // attack set of opposition after move
-        let atk_set = gen_pseudolegal_moves(&post_move, &turn.other())
-            .iter()
-            .fold(0, |acc, x| acc | x);
-        let k_square = match turn {
-            board::Colour::W => post_move.w,
-            board::Colour::B => post_move.b,
-        }[board::Piece::K as usize];
-        debug_assert!(k_square.count_ones() == 1);
-        if atk_set & k_square != 0 {
-            // This move leaves us in check, remove
-            let sq = from.trailing_zeros() as usize;
-            pseudo[sq] &= !to;
+    for Move { from, tos: mut tos } in pseudo {
+        for to in iter_tos(tos) {
+            let post_move = board.make_move(from, to);
+            // attack set of opposition after move
+            let atk_set = gen_pseudolegal_moves(&post_move, &turn.other())
+                .iter()
+                .fold(0, |acc, x| acc | x.tos);
+            let k_square = match turn {
+                board::Colour::W => post_move.w,
+                board::Colour::B => post_move.b,
+            }[board::Piece::K as usize];
+            debug_assert!(k_square.count_ones() == 1);
+            if atk_set & k_square != 0 {
+                // This move leaves us in check, remove
+                let sq = from.trailing_zeros() as usize;
+                tos &= !to;
+            }
         }
     }
+    let k_board =
+    let mut k_to = pseudo.iter_mut().find(|m| )
     // Invalidate castle if we moved through check (check if the adjacent square is still valid)
     match turn {
         board::Colour::W => {
             if board.w[board::Piece::K as usize] == E1 {
-                let k_idx = E1.trailing_zeros() as usize;
-                if (pseudo[k_idx] & C1 != 0) && (pseudo[k_idx] & D1 == 0) {
-                    pseudo[k_idx] &= !C1;
+                if (k_to & C1 != 0) && (k_to & D1 == 0) {
+                    k_to &= !C1;
                 }
-                if (pseudo[k_idx] & G1 != 0) && (pseudo[k_idx] & F1 == 0) {
-                    pseudo[k_idx] &= !G1;
+                if (k_to & G1 != 0) && (k_to & F1 == 0) {
+                    k_to &= !G1;
                 }
             }
         }
         board::Colour::B => {
             if board.w[board::Piece::K as usize] == E8 {
-                let k_idx = E8.trailing_zeros() as usize;
-                if (pseudo[k_idx] & C8 != 0) && (pseudo[k_idx] & D8 == 0) {
-                    pseudo[k_idx] &= !C8;
+                if (k_to & C8 != 0) && (k_to & D8 == 0) {
+                    k_to &= !C8;
                 }
-                if (pseudo[k_idx] & G8 != 0) && (pseudo[k_idx] & F8 == 0) {
-                    pseudo[k_idx] &= !G8;
+                if (k_to & G8 != 0) && (k_to & F8 == 0) {
+                    k_to &= !G8;
                 }
             }
         }
@@ -50,24 +57,21 @@ pub fn gen_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
     pseudo
 }
 
-pub fn iter_moves(moves: &[u64; 64]) -> impl Iterator<Item = (u64, u64)> {
-    (0..64).flat_map(|sq| {
-        let from = 1u64 << sq;
-        let mut m = moves[sq];
-        std::iter::from_fn(move || {
-            if m == 0 {
-                None
-            } else {
-                let to = m & m.wrapping_neg();
-                m &= m - 1;
-                Some((from, to))
-            }
-        })
+fn iter_tos(tos: u64) -> impl Iterator<Item = u64> {
+    let mut m = tos;
+    std::iter::from_fn(move || {
+        if m == 0 {
+            None
+        } else {
+            let to = m & m.wrapping_neg();
+            m &= m - 1;
+            Some(to)
+        }
     })
 }
 
-fn gen_pseudolegal_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
-    let mut moves = [0; 64];
+fn gen_pseudolegal_moves(board: &board::Board, turn: &board::Colour) -> Vec<Move> {
+    let mut moves = Vec::new();
     let exclude = match turn {
         board::Colour::W => board.white(),
         board::Colour::B => board.black(),
@@ -83,7 +87,10 @@ fn gen_pseudolegal_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64
                 board::Piece::K => get_king_moves(sq, &turn, &board),
             };
             // filter out self captures
-            moves[sq.trailing_zeros() as usize] = possible_moves & !exclude;
+            moves.push(Move {
+                from: sq,
+                tos: possible_moves & !exclude,
+            });
         }
     }
     moves
