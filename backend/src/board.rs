@@ -54,6 +54,86 @@ impl Board {
         }
     }
 
+    pub fn from_fen(fen: &str) -> Result<(Self, Colour), ()> {
+        let &[pieces, side, castling, en_passant, _halfmove, _fullmove] =
+            fen.split_ascii_whitespace().collect::<Vec<_>>().as_slice()
+        else {
+            return Err(());
+        };
+        let mut board = Self {
+            w: [0; 6],
+            b: [0; 6],
+            castle_rights: 0,
+            en_passant: 0,
+        };
+
+        // Pieces
+        for (row, chars) in pieces.split("/").enumerate() {
+            let mut col = 0;
+            for chr in chars.chars() {
+                if let Some(empty) = chr.to_digit(10) {
+                    col += empty;
+                } else {
+                    let arr = if chr.is_ascii_lowercase() {
+                        &mut board.b
+                    } else {
+                        &mut board.w
+                    };
+                    let sq = 1u64 << (row as u32 * 8 + col);
+                    match chr.to_ascii_lowercase() {
+                        'p' => arr[Piece::P as usize] |= sq,
+                        'n' => arr[Piece::N as usize] |= sq,
+                        'b' => arr[Piece::B as usize] |= sq,
+                        'r' => arr[Piece::R as usize] |= sq,
+                        'q' => arr[Piece::Q as usize] |= sq,
+                        'k' => arr[Piece::K as usize] |= sq,
+                        _ => return Err(()),
+                    };
+                }
+            }
+        }
+
+        // Side
+        let turn = match side {
+            "w" => Colour::W,
+            "b" => Colour::B,
+            _ => return Err(()),
+        };
+
+        // Castling right
+        if castling.contains('K') {
+            board.castle_rights |= Self::WK;
+        }
+        if castling.contains('Q') {
+            board.castle_rights |= Self::WQ;
+        }
+        if castling.contains('k') {
+            board.castle_rights |= Self::BK;
+        }
+        if castling.contains('q') {
+            board.castle_rights |= Self::BQ;
+        }
+
+        // en passant
+        if en_passant != "-" {
+            if en_passant.len() != 2 {
+                return Err(());
+            }
+            let bytes = en_passant.as_bytes();
+            let col = match bytes[0] {
+                b'a'..=b'h' => bytes[0] - b'a',
+                _ => return Err(()),
+            };
+            let row = match bytes[1] {
+                b'1'..=b'8' => bytes[1] - b'1',
+                _ => return Err(()),
+            };
+            board.en_passant = 1u64 << (row * 8 + col);
+        }
+
+        Ok((board, turn))
+    }
+
     pub fn white(&self) -> u64 {
         (0..Piece::COUNT).fold(0, |acc, x| acc | self.w[x])
     }
@@ -164,18 +244,18 @@ impl fmt::Display for Board {
                 let mask: u64 = 1 << (row * 8 + col);
                 #[rustfmt::skip]
                 write!(f, "{}", {
-                    if self.w[Piece::P as usize] & mask != 0 {"p"}
-                    else if self.w[Piece::N as usize] & mask != 0 {"n"}
-                    else if self.w[Piece::B as usize] & mask != 0 {"b"}
-                    else if self.w[Piece::R as usize] & mask != 0 {"r"}
-                    else if self.w[Piece::Q as usize] & mask != 0 {"q"}
-                    else if self.w[Piece::K as usize] & mask != 0 {"k"}
-                    else if self.b[Piece::P as usize] & mask != 0 {"P"}
-                    else if self.b[Piece::N as usize] & mask != 0 {"N"}
-                    else if self.b[Piece::B as usize] & mask != 0 {"B"}
-                    else if self.b[Piece::R as usize] & mask != 0 {"R"}
-                    else if self.b[Piece::Q as usize] & mask != 0 {"Q"}
-                    else if self.b[Piece::K as usize] & mask != 0 {"K"}
+                    if self.w[Piece::P as usize] & mask != 0 {"P"}
+                    else if self.w[Piece::N as usize] & mask != 0 {"N"}
+                    else if self.w[Piece::B as usize] & mask != 0 {"B"}
+                    else if self.w[Piece::R as usize] & mask != 0 {"R"}
+                    else if self.w[Piece::Q as usize] & mask != 0 {"Q"}
+                    else if self.w[Piece::K as usize] & mask != 0 {"K"}
+                    else if self.b[Piece::P as usize] & mask != 0 {"p"}
+                    else if self.b[Piece::N as usize] & mask != 0 {"n"}
+                    else if self.b[Piece::B as usize] & mask != 0 {"b"}
+                    else if self.b[Piece::R as usize] & mask != 0 {"r"}
+                    else if self.b[Piece::Q as usize] & mask != 0 {"q"}
+                    else if self.b[Piece::K as usize] & mask != 0 {"k"}
                     else {"."}
                 })?;
             }

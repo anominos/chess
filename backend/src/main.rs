@@ -36,6 +36,10 @@ fn main() {
                 turn = turn.other();
                 println!("{}", board);
             }
+            cmd if cmd.starts_with("load ") => {
+                let fen = &cmd[5..];
+                (board, turn) = board::Board::from_fen(fen).unwrap();
+            }
             "perft" => {
                 println!("Doing perft");
                 for i in 1..10 {
