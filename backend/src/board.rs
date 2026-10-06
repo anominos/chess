@@ -54,11 +54,11 @@ impl Board {
         }
     }
 
-    pub fn from_fen(fen: &str) -> Result<(Self, Colour), ()> {
+    pub fn from_fen(fen: &str) -> Result<(Self, Colour), &'static str> {
         let &[pieces, side, castling, en_passant, _halfmove, _fullmove] =
             fen.split_ascii_whitespace().collect::<Vec<_>>().as_slice()
         else {
-            return Err(());
+            return Err("Error unpacking args");
         };
         let mut board = Self {
             w: [0; 6],
@@ -79,7 +79,7 @@ impl Board {
                     } else {
                         &mut board.w
                     };
-                    let sq = 1u64 << (row as u32 * 8 + col);
+                    let sq = 1u64 << ((7 - row as u32) * 8 + col);
                     match chr.to_ascii_lowercase() {
                         'p' => arr[Piece::P as usize] |= sq,
                         'n' => arr[Piece::N as usize] |= sq,
@@ -87,8 +87,9 @@ impl Board {
                         'r' => arr[Piece::R as usize] |= sq,
                         'q' => arr[Piece::Q as usize] |= sq,
                         'k' => arr[Piece::K as usize] |= sq,
-                        _ => return Err(()),
+                        _ => return Err("invalid pieces"),
                     };
+                    col += 1;
                 }
             }
         }
@@ -97,7 +98,7 @@ impl Board {
         let turn = match side {
             "w" => Colour::W,
             "b" => Colour::B,
-            _ => return Err(()),
+            _ => return Err("invalid turn"),
         };
 
         // Castling right
@@ -117,16 +118,16 @@ impl Board {
         // en passant
         if en_passant != "-" {
             if en_passant.len() != 2 {
-                return Err(());
+                return Err("invalid sq - too long");
             }
             let bytes = en_passant.as_bytes();
             let col = match bytes[0] {
                 b'a'..=b'h' => bytes[0] - b'a',
-                _ => return Err(()),
+                _ => return Err("invalid sq, col"),
             };
             let row = match bytes[1] {
                 b'1'..=b'8' => bytes[1] - b'1',
-                _ => return Err(()),
+                _ => return Err("invalid sq, row"),
             };
             board.en_passant = 1u64 << (row * 8 + col);
         }
