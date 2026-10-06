@@ -35,7 +35,7 @@ pub fn gen_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
             }
         }
         board::Colour::B => {
-            if board.w[board::Piece::K as usize] == E8 {
+            if board.b[board::Piece::K as usize] == E8 {
                 let k_idx = E8.trailing_zeros() as usize;
                 if (pseudo[k_idx] & C8 != 0) && (pseudo[k_idx] & D8 == 0) {
                     pseudo[k_idx] &= !C8;

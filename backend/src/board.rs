@@ -149,11 +149,20 @@ impl Board {
 
     pub fn make_move(&self, from: u64, to: u64) -> Self {
         let mut new_board = self.clone();
+        // clear castle rights if we've moved from the square
         new_board.castle_rights &= !match from {
             E1 => Board::WQ | Board::WK,
             A1 => Board::WQ,
             H1 => Board::WK,
             E8 => Board::BQ | Board::BK,
+            A8 => Board::BQ,
+            H8 => Board::BK,
+            _ => 0,
+        };
+        // also clear castle rights on capturing rooks
+        new_board.castle_rights &= !match to {
+            A1 => Board::WQ,
+            H1 => Board::WK,
             A8 => Board::BQ,
             H8 => Board::BK,
             _ => 0,
