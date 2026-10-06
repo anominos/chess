@@ -4,8 +4,8 @@ use crate::consts::*;
 pub fn gen_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
     let mut pseudo = gen_pseudolegal_moves(board, turn);
     // Make sure the move doesn't leave the king in check
-    for (from, to) in iter_moves(&pseudo.clone()) {
-        let post_move = board.make_move(from, to);
+    for (from, to, promote) in iter_moves(&pseudo.clone(), &board) {
+        let post_move = board.make_move(from, to, promote);
         // attack set of opposition after move
         let atk_set = gen_pseudolegal_moves(&post_move, &turn.other())
             .iter()
@@ -50,7 +50,12 @@ pub fn gen_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
     pseudo
 }
 
-pub fn iter_moves(moves: &[u64; 64]) -> impl Iterator<Item = (u64, u64)> {
+pub fn iter_moves(
+    moves: &[u64; 64],
+    board: &board::Board,
+) -> impl Iterator<Item = (u64, u64, Option<board::Piece>)> {
+    const R1: u64 = A1 | B1 | C1 | D1 | E1 | F1 | G1 | H1;
+    const R8: u64 = A8 | B8 | C8 | D8 | E8 | F8 | G8 | H8;
     (0..64).flat_map(|sq| {
         let from = 1u64 << sq;
         let mut m = moves[sq];
@@ -62,6 +67,22 @@ pub fn iter_moves(moves: &[u64; 64]) -> impl Iterator<Item = (u64, u64)> {
                 m &= m - 1;
                 Some((from, to))
             }
+        })
+        .flat_map(|(fr, to)| {
+            if (fr & board.w[board::Piece::P as usize] != 0 && to & R8 != 0)
+                || (fr & board.b[board::Piece::P as usize] != 0 && to & R1 != 0)
+            {
+                [
+                    Some((fr, to, Some(board::Piece::Q))),
+                    Some((fr, to, Some(board::Piece::N))),
+                    Some((fr, to, Some(board::Piece::R))),
+                    Some((fr, to, Some(board::Piece::B))),
+                ]
+            } else {
+                [Some((fr, to, None)), None, None, None]
+            }
+            .into_iter()
+            .flatten()
         })
     })
 }

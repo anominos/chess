@@ -147,7 +147,7 @@ impl Board {
         self.white() | self.black()
     }
 
-    pub fn make_move(&self, from: u64, to: u64) -> Self {
+    pub fn make_move(&self, from: u64, to: u64, promote: Option<Piece>) -> Self {
         let mut new_board = self.clone();
         // clear castle rights if we've moved from the square
         new_board.castle_rights &= !match from {
@@ -201,7 +201,12 @@ impl Board {
         }
 
         if let Some(b) = fr_side.iter_mut().find(|b| **b & from != 0) {
-            *b = (*b & !from) | to;
+            if let Some(piece) = promote {
+                *b = *b & !from;
+                fr_side[piece as usize] |= to;
+            } else {
+                *b = (*b & !from) | to;
+            }
         }
         // check for en_passant capture
         if (from & fr_side[Piece::P as usize]) != 0 && to == self.en_passant {
