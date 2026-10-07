@@ -3,6 +3,11 @@ mod magics;
 use magics::{BISHOP_MAGICS, ROOK_MAGICS};
 
 fn main() {
+    println!(
+        "r={} b={}",
+        calc_lens(ROOK_MAGICS),
+        calc_lens(BISHOP_MAGICS)
+    );
     println!("Rook size: {:.2}kB", calc_size(ROOK_MAGICS) as f64 / 1024.0);
     println!(
         "Bishop size: {:.2}kB",
@@ -14,6 +19,10 @@ fn main() {
     );
     println!("----");
     print_popcounts();
+}
+
+fn calc_lens(arr: [magics::Magic; 64]) -> usize {
+    arr.iter().map(|m| m.array.len()).sum::<usize>()
 }
 
 fn calc_size(arr: [magics::Magic; 64]) -> usize {
