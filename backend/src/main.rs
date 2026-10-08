@@ -3,6 +3,8 @@ use std::io::Write;
 
 use backend::board;
 use backend::move_gen;
+use rayon::iter::ParallelBridge;
+use rayon::iter::ParallelIterator;
 
 // Test fens: r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - - -
 
@@ -71,12 +73,13 @@ fn perft(board: &board::Board, turn: &board::Colour, depth: u32) -> u64 {
         return 1;
     }
     let moves = move_gen::gen_moves(&board, &turn);
-    let mut count = 0;
-    for (from, to, promote) in move_gen::iter_moves(&moves, &board) {
-        let next = board.make_move(from, to, promote);
-        count += perft(&next, &turn.other(), depth - 1);
-    }
-    count
+    move_gen::iter_moves(&moves, &board)
+        .par_bridge()
+        .map(|(from, to, promote)| {
+            let next = board.make_move(from, to, promote);
+            perft(&next, &turn.other(), depth - 1)
+        })
+        .sum()
 }
 
 fn parse_squares(s: &str) -> Option<u64> {
