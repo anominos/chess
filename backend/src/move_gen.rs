@@ -2,7 +2,7 @@ use crate::board;
 use crate::consts::*;
 
 pub fn gen_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
-    let mut pseudo = gen_pseudolegal_moves(board, turn);
+    let mut pseudo = gen_pseudolegal_moves(&board, &turn);
     // Make sure the move doesn't leave the king in check
     for (from, to, promote) in iter_moves(&pseudo.clone(), &board) {
         let post_move = board.make_move(from, to, promote);
@@ -22,25 +22,31 @@ pub fn gen_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
         }
     }
     // Invalidate castle if we moved through check (check if the adjacent square is still valid)
+    // Also invalidate if we are in check
+    let atk_set = gen_pseudolegal_moves(&board, &turn.other())
+        .iter()
+        .fold(0, |acc, x| acc | x);
     match turn {
         board::Colour::W => {
+            let in_check = (board.w[board::Piece::K as usize] & atk_set) != 0;
             if board.w[board::Piece::K as usize] == E1 {
                 let k_idx = E1.trailing_zeros() as usize;
-                if (pseudo[k_idx] & C1 != 0) && (pseudo[k_idx] & D1 == 0) {
+                if in_check || ((pseudo[k_idx] & C1 != 0) && (pseudo[k_idx] & D1 == 0)) {
                     pseudo[k_idx] &= !C1;
                 }
-                if (pseudo[k_idx] & G1 != 0) && (pseudo[k_idx] & F1 == 0) {
+                if in_check || ((pseudo[k_idx] & G1 != 0) && (pseudo[k_idx] & F1 == 0)) {
                     pseudo[k_idx] &= !G1;
                 }
             }
         }
         board::Colour::B => {
+            let in_check = (board.b[board::Piece::K as usize] & atk_set) != 0;
             if board.b[board::Piece::K as usize] == E8 {
                 let k_idx = E8.trailing_zeros() as usize;
-                if (pseudo[k_idx] & C8 != 0) && (pseudo[k_idx] & D8 == 0) {
+                if in_check || ((pseudo[k_idx] & C8 != 0) && (pseudo[k_idx] & D8 == 0)) {
                     pseudo[k_idx] &= !C8;
                 }
-                if (pseudo[k_idx] & G8 != 0) && (pseudo[k_idx] & F8 == 0) {
+                if in_check || ((pseudo[k_idx] & G8 != 0) && (pseudo[k_idx] & F8 == 0)) {
                     pseudo[k_idx] &= !G8;
                 }
             }
