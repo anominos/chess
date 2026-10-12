@@ -19,6 +19,7 @@ fn main() {
     );
     println!("----");
     print_popcounts();
+    print_leading_zeros();
 }
 
 fn calc_lens(arr: [magics::Magic; 64]) -> usize {
@@ -48,4 +49,25 @@ fn print_popcounts() -> () {
             println!();
         }
     }
+}
+
+fn print_leading_zeros() {
+    let mut c = 0;
+    for i in ROOK_MAGICS {
+        let mut j = 0;
+        while i.array[j] == 0 {
+            j += 1;
+        }
+        c += j;
+    }
+    print!("Leading zeroes: r={}", c);
+    let mut c = 0;
+    for i in BISHOP_MAGICS {
+        let mut j = 0;
+        while i.array[j] == 0 {
+            j += 1;
+        }
+        c += j;
+    }
+    println!(" b={}", c);
 }
