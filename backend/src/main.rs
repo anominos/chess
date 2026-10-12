@@ -1,4 +1,3 @@
-use std::env;
 use std::io;
 use std::io::Write;
 
@@ -7,19 +6,30 @@ use backend::move_gen;
 use rayon::iter::ParallelBridge;
 use rayon::iter::ParallelIterator;
 
-// Test fens: r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - - -
+use clap::{Parser, Subcommand};
+
+#[derive(Parser)]
+struct Cli {
+    #[command(subcommand)]
+    cmd: Option<Command>,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    Perft { depth: u32 },
+}
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    match args.as_slice() {
-        [_, cmd, n] if cmd == "perft" => {
+    let cli = Cli::parse();
+    match cli.cmd {
+        Some(Command::Perft { depth }) => {
             let board = board::Board::default();
             let turn = board::Colour::W;
-            let result = perft(&board, &turn, n.parse().unwrap());
-            println!("{}", result);
+            let result = perft(&board, &turn, depth);
+            println!("perft result at depth={}, n={}", depth, result);
         }
-        _ => app(),
-    }
+        None => app(),
+    };
 }
 
 fn app() {
