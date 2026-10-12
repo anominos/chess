@@ -1,3 +1,4 @@
+use std::env;
 use std::io;
 use std::io::Write;
 
@@ -9,6 +10,19 @@ use rayon::iter::ParallelIterator;
 // Test fens: r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - - -
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    match args.as_slice() {
+        [_, cmd, n] if cmd == "perft" => {
+            let board = board::Board::default();
+            let turn = board::Colour::W;
+            let result = perft(&board, &turn, n.parse().unwrap());
+            println!("{}", result);
+        }
+        _ => app(),
+    }
+}
+
+fn app() {
     let mut board = board::Board::default();
     let mut turn = board::Colour::W;
     println!("{}", board);
