@@ -3,8 +3,7 @@ use std::io::Write;
 
 use backend::board;
 use backend::move_gen;
-use rayon::iter::ParallelBridge;
-use rayon::iter::ParallelIterator;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use clap::{Parser, Subcommand};
 

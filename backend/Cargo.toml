@@ -20,3 +20,10 @@ syn = "3.0.6"
 
 [profile.release]
 debug = "line-tables-only"
+
+[dev-dependencies]
+criterion = "0.8.2"
+
+[[bench]]
+name = "bench_movegen"
+harness = false

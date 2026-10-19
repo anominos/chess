@@ -116,7 +116,7 @@ fn gen_pseudolegal_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64
     moves
 }
 
-fn get_pawn_moves(piece: u64, colour: &board::Colour, board: &board::Board) -> u64 {
+pub fn get_pawn_moves(piece: u64, colour: &board::Colour, board: &board::Board) -> u64 {
     let captures = match colour {
         board::Colour::W => &WHITE_PAWN_CAPTURES,
         board::Colour::B => &BLACK_PAWN_CAPTURES,
@@ -142,11 +142,11 @@ fn get_pawn_moves(piece: u64, colour: &board::Colour, board: &board::Board) -> u
     moves | (captures[sq_idx] & (board.occupancy() | board.en_passant))
 }
 
-fn get_knight_moves(piece: u64) -> u64 {
+pub fn get_knight_moves(piece: u64) -> u64 {
     KNIGHT_MOVES[piece.trailing_zeros() as usize]
 }
 
-fn get_king_moves(piece: u64, turn: &board::Colour, board: &board::Board) -> u64 {
+pub fn get_king_moves(piece: u64, turn: &board::Colour, board: &board::Board) -> u64 {
     // Castling moves
     let slide_moves = get_rook_moves(piece, board);
     let mut castle_moves = 0u64;
@@ -171,20 +171,20 @@ fn get_king_moves(piece: u64, turn: &board::Colour, board: &board::Board) -> u64
     KING_MOVES[piece.trailing_zeros() as usize] | castle_moves
 }
 
-fn get_bishop_moves(piece: u64, board: &board::Board) -> u64 {
+pub fn get_bishop_moves(piece: u64, board: &board::Board) -> u64 {
     let piece_idx = piece.trailing_zeros() as usize;
     let magic = &BISHOP_MAGICS[piece_idx];
     magic.array
         [(((board.occupancy() | magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
 }
 
-fn get_rook_moves(piece: u64, board: &board::Board) -> u64 {
+pub fn get_rook_moves(piece: u64, board: &board::Board) -> u64 {
     let piece_idx = piece.trailing_zeros() as usize;
     let magic = &ROOK_MAGICS[piece_idx];
     magic.array
         [(((board.occupancy() | magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
 }
 
-fn get_queen_moves(piece: u64, board: &board::Board) -> u64 {
+pub fn get_queen_moves(piece: u64, board: &board::Board) -> u64 {
     get_bishop_moves(piece, board) | get_rook_moves(piece, board)
 }
