@@ -2,7 +2,7 @@ use crate::consts::*;
 use std::fmt;
 
 #[repr(usize)]
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Piece {
     P,
     N,
