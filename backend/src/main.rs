@@ -59,18 +59,20 @@ fn app() {
                 }
                 let from = parse_squares(&parts[1][0..2]).unwrap();
                 let to = parse_squares(&parts[1][2..4]).unwrap();
-                let promote = &parts[1][4..];
-                board = board.make_move(
-                    from,
-                    to,
-                    match promote {
-                        "N" => Some(board::Piece::N),
-                        "B" => Some(board::Piece::B),
-                        "R" => Some(board::Piece::R),
-                        "Q" => Some(board::Piece::Q),
-                        _ => None,
-                    },
-                );
+                let promote = match &parts[1][4..] {
+                    "N" => Some(board::Piece::N),
+                    "B" => Some(board::Piece::B),
+                    "R" => Some(board::Piece::R),
+                    "Q" => Some(board::Piece::Q),
+                    _ => None,
+                };
+                if !(move_gen::iter_moves(&move_gen::gen_moves(&board, &turn), &board)
+                    .any(|x| x == (from, to, promote)))
+                {
+                    println!("Invalid move");
+                    continue;
+                }
+                board = board.make_move(from, to, promote);
                 turn = turn.other();
                 println!("{}", board);
             }
