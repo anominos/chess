@@ -21,9 +21,7 @@ pub fn gen_moves(board: &board::Board, turn: board::Colour) -> [u64; 64] {
     }
     // Invalidate castle if we moved through check (check if the adjacent square is still valid)
     // Also invalidate if we are in check
-    let atk_set = gen_pseudolegal_moves(&board, turn.other())
-        .iter()
-        .fold(0, |acc, x| acc | x);
+    let atk_set = get_attack_set(&board, turn.other());
     match turn {
         board::Colour::W => {
             let in_check = (board.w[board::Piece::K as usize] & atk_set) != 0;
