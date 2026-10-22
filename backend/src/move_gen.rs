@@ -118,31 +118,30 @@ pub fn get_attack_set(board: &board::Board, turn: &board::Colour) -> u64 {
     const LEFT_MASK: u64 = 0x007F_7F7F_7F7F_7F00u64;
     const RIGHT_MASK: u64 = 0x00FE_FEFE_FEFE_FE00u64;
     let mut atks = 0;
-    for p in board::Piece::PIECES {
-        if p == board::Piece::P {
-            match turn {
-                board::Colour::W => {
-                    atks |= (board.w[board::Piece::P as usize] & LEFT_MASK) << 9;
-                    atks |= (board.w[board::Piece::P as usize] & RIGHT_MASK) << 7;
-                }
-                board::Colour::B => {
-                    atks |= (board.b[board::Piece::P as usize] & LEFT_MASK) >> 7;
-                    atks |= (board.b[board::Piece::P as usize] & RIGHT_MASK) >> 9;
-                }
-            }
-            continue;
+    match turn {
+        board::Colour::W => {
+            atks |= (board.w[board::Piece::P as usize] & LEFT_MASK) << 9;
+            atks |= (board.w[board::Piece::P as usize] & RIGHT_MASK) << 7;
         }
-        for sq in board.squares_by_piece(&p, &turn) {
-            let possible_moves = match p {
-                board::Piece::B => get_bishop_moves(sq, &board),
-                board::Piece::N => get_knight_moves(sq),
-                board::Piece::R => get_rook_moves(sq, &board),
-                board::Piece::Q => get_queen_moves(sq, &board),
-                board::Piece::K => KING_MOVES[sq.trailing_zeros() as usize],
-                board::Piece::P => unreachable!(),
-            };
-            atks |= possible_moves;
+        board::Colour::B => {
+            atks |= (board.b[board::Piece::P as usize] & LEFT_MASK) >> 7;
+            atks |= (board.b[board::Piece::P as usize] & RIGHT_MASK) >> 9;
         }
+    }
+    for sq in board.squares_by_piece(&board::Piece::B, &turn) {
+        atks |= get_bishop_moves(sq, &board);
+    }
+    for sq in board.squares_by_piece(&board::Piece::N, &turn) {
+        atks |= get_knight_moves(sq);
+    }
+    for sq in board.squares_by_piece(&board::Piece::R, &turn) {
+        atks |= get_rook_moves(sq, &board);
+    }
+    for sq in board.squares_by_piece(&board::Piece::Q, &turn) {
+        atks |= get_queen_moves(sq, &board);
+    }
+    for sq in board.squares_by_piece(&board::Piece::K, &turn) {
+        atks |= KING_MOVES[sq.trailing_zeros() as usize];
     }
     atks
 }
