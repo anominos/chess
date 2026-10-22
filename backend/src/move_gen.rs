@@ -97,14 +97,15 @@ fn gen_pseudolegal_moves(board: &board::Board, turn: board::Colour) -> [u64; 64]
         board::Colour::W => board.white(),
         board::Colour::B => board.black(),
     };
+    let occ = board.occupancy();
     for p in board::Piece::PIECES {
         for sq in board.squares_by_piece(&p, turn) {
             let possible_moves = match p {
                 board::Piece::P => get_pawn_moves(sq, turn, &board),
-                board::Piece::B => get_bishop_moves(sq, &board),
+                board::Piece::B => get_bishop_moves(sq, occ),
                 board::Piece::N => get_knight_moves(sq),
-                board::Piece::R => get_rook_moves(sq, &board),
-                board::Piece::Q => get_queen_moves(sq, &board),
+                board::Piece::R => get_rook_moves(sq, occ),
+                board::Piece::Q => get_queen_moves(sq, occ),
                 board::Piece::K => get_king_moves(sq, turn, &board),
             };
             // filter out self captures
@@ -128,17 +129,18 @@ pub fn get_attack_set(board: &board::Board, turn: board::Colour) -> u64 {
             atks |= (board.b[board::Piece::P as usize] & RIGHT_MASK) >> 9;
         }
     }
-    for sq in board.squares_by_piece(&board::Piece::B, turn) {
-        atks |= get_bishop_moves(sq, &board);
-    }
     for sq in board.squares_by_piece(&board::Piece::N, turn) {
         atks |= get_knight_moves(sq);
     }
+    let occ = board.occupancy();
+    for sq in board.squares_by_piece(&board::Piece::B, turn) {
+        atks |= get_bishop_moves(sq, occ);
+    }
     for sq in board.squares_by_piece(&board::Piece::R, turn) {
-        atks |= get_rook_moves(sq, &board);
+        atks |= get_rook_moves(sq, occ);
     }
     for sq in board.squares_by_piece(&board::Piece::Q, turn) {
-        atks |= get_queen_moves(sq, &board);
+        atks |= get_queen_moves(sq, occ);
     }
     for sq in board.squares_by_piece(&board::Piece::K, turn) {
         atks |= KING_MOVES[sq.trailing_zeros() as usize];
@@ -178,7 +180,7 @@ pub fn get_knight_moves(piece: u64) -> u64 {
 
 pub fn get_king_moves(piece: u64, turn: board::Colour, board: &board::Board) -> u64 {
     // Castling moves
-    let slide_moves = get_rook_moves(piece, board);
+    let slide_moves = get_rook_moves(piece, board.occupancy());
     let mut castle_moves = 0u64;
     match turn {
         board::Colour::W => {
@@ -201,20 +203,18 @@ pub fn get_king_moves(piece: u64, turn: board::Colour, board: &board::Board) -> 
     KING_MOVES[piece.trailing_zeros() as usize] | castle_moves
 }
 
-pub fn get_bishop_moves(piece: u64, board: &board::Board) -> u64 {
+pub fn get_bishop_moves(piece: u64, occ: u64) -> u64 {
     let piece_idx = piece.trailing_zeros() as usize;
     let magic = &BISHOP_MAGICS[piece_idx];
-    magic.array
-        [(((board.occupancy() | magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
+    magic.array[(((occ | magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
 }
 
-pub fn get_rook_moves(piece: u64, board: &board::Board) -> u64 {
+pub fn get_rook_moves(piece: u64, occ: u64) -> u64 {
     let piece_idx = piece.trailing_zeros() as usize;
     let magic = &ROOK_MAGICS[piece_idx];
-    magic.array
-        [(((board.occupancy() | magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
+    magic.array[(((occ | magic.mask).wrapping_mul(magic.magic)) >> magic.shift) as usize]
 }
 
-pub fn get_queen_moves(piece: u64, board: &board::Board) -> u64 {
-    get_bishop_moves(piece, board) | get_rook_moves(piece, board)
+pub fn get_queen_moves(piece: u64, occ: u64) -> u64 {
+    get_bishop_moves(piece, occ) | get_rook_moves(piece, occ)
 }
