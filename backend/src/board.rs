@@ -222,7 +222,7 @@ impl Board {
         new_board
     }
 
-    pub fn squares_by_piece(&self, piece: &Piece, colour: &Colour) -> impl Iterator<Item = u64> {
+    pub fn squares_by_piece(&self, piece: &Piece, colour: Colour) -> impl Iterator<Item = u64> {
         let mut bitboard = match colour {
             Colour::W => &self.w,
             Colour::B => &self.b,

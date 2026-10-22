@@ -1,13 +1,13 @@
 use crate::board;
 use crate::consts::*;
 
-pub fn gen_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
-    let mut pseudo = gen_pseudolegal_moves(&board, &turn);
+pub fn gen_moves(board: &board::Board, turn: board::Colour) -> [u64; 64] {
+    let mut pseudo = gen_pseudolegal_moves(&board, turn);
     // Make sure the move doesn't leave the king in check
     for (from, to, promote) in iter_moves(&pseudo.clone(), &board) {
         let post_move = board.make_move(from, to, promote);
         // attack set of opposition after move
-        let atk_set = get_attack_set(&post_move, &turn.other());
+        let atk_set = get_attack_set(&post_move, turn.other());
         let k_square = match turn {
             board::Colour::W => post_move.w,
             board::Colour::B => post_move.b,
@@ -21,7 +21,7 @@ pub fn gen_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
     }
     // Invalidate castle if we moved through check (check if the adjacent square is still valid)
     // Also invalidate if we are in check
-    let atk_set = gen_pseudolegal_moves(&board, &turn.other())
+    let atk_set = gen_pseudolegal_moves(&board, turn.other())
         .iter()
         .fold(0, |acc, x| acc | x);
     match turn {
@@ -91,21 +91,21 @@ pub fn iter_moves(
     })
 }
 
-fn gen_pseudolegal_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64] {
+fn gen_pseudolegal_moves(board: &board::Board, turn: board::Colour) -> [u64; 64] {
     let mut moves = [0; 64];
     let exclude = match turn {
         board::Colour::W => board.white(),
         board::Colour::B => board.black(),
     };
     for p in board::Piece::PIECES {
-        for sq in board.squares_by_piece(&p, &turn) {
+        for sq in board.squares_by_piece(&p, turn) {
             let possible_moves = match p {
-                board::Piece::P => get_pawn_moves(sq, &turn, &board),
+                board::Piece::P => get_pawn_moves(sq, turn, &board),
                 board::Piece::B => get_bishop_moves(sq, &board),
                 board::Piece::N => get_knight_moves(sq),
                 board::Piece::R => get_rook_moves(sq, &board),
                 board::Piece::Q => get_queen_moves(sq, &board),
-                board::Piece::K => get_king_moves(sq, &turn, &board),
+                board::Piece::K => get_king_moves(sq, turn, &board),
             };
             // filter out self captures
             moves[sq.trailing_zeros() as usize] = possible_moves & !exclude;
@@ -114,7 +114,7 @@ fn gen_pseudolegal_moves(board: &board::Board, turn: &board::Colour) -> [u64; 64
     moves
 }
 
-pub fn get_attack_set(board: &board::Board, turn: &board::Colour) -> u64 {
+pub fn get_attack_set(board: &board::Board, turn: board::Colour) -> u64 {
     const LEFT_MASK: u64 = 0x007F_7F7F_7F7F_7F00u64;
     const RIGHT_MASK: u64 = 0x00FE_FEFE_FEFE_FE00u64;
     let mut atks = 0;
@@ -128,25 +128,25 @@ pub fn get_attack_set(board: &board::Board, turn: &board::Colour) -> u64 {
             atks |= (board.b[board::Piece::P as usize] & RIGHT_MASK) >> 9;
         }
     }
-    for sq in board.squares_by_piece(&board::Piece::B, &turn) {
+    for sq in board.squares_by_piece(&board::Piece::B, turn) {
         atks |= get_bishop_moves(sq, &board);
     }
-    for sq in board.squares_by_piece(&board::Piece::N, &turn) {
+    for sq in board.squares_by_piece(&board::Piece::N, turn) {
         atks |= get_knight_moves(sq);
     }
-    for sq in board.squares_by_piece(&board::Piece::R, &turn) {
+    for sq in board.squares_by_piece(&board::Piece::R, turn) {
         atks |= get_rook_moves(sq, &board);
     }
-    for sq in board.squares_by_piece(&board::Piece::Q, &turn) {
+    for sq in board.squares_by_piece(&board::Piece::Q, turn) {
         atks |= get_queen_moves(sq, &board);
     }
-    for sq in board.squares_by_piece(&board::Piece::K, &turn) {
+    for sq in board.squares_by_piece(&board::Piece::K, turn) {
         atks |= KING_MOVES[sq.trailing_zeros() as usize];
     }
     atks
 }
 
-pub fn get_pawn_moves(piece: u64, colour: &board::Colour, board: &board::Board) -> u64 {
+pub fn get_pawn_moves(piece: u64, colour: board::Colour, board: &board::Board) -> u64 {
     let captures = match colour {
         board::Colour::W => &WHITE_PAWN_CAPTURES,
         board::Colour::B => &BLACK_PAWN_CAPTURES,
@@ -160,11 +160,11 @@ pub fn get_pawn_moves(piece: u64, colour: &board::Colour, board: &board::Board) 
             board::Colour::B => piece >> 8,
         } & !board.occupancy();
     }
-    if moves != 0 && *colour == board::Colour::W && row == 1 {
+    if moves != 0 && colour == board::Colour::W && row == 1 {
         // no piece in the way, we are white and we are on the 2nd row,
         // add jump
         moves |= piece << 16 & !board.occupancy();
-    } else if moves != 0 && *colour == board::Colour::B && row == 6 {
+    } else if moves != 0 && colour == board::Colour::B && row == 6 {
         // no piece in the way, we are black and we are on the 7th row,
         // add jump
         moves |= piece >> 16 & !board.occupancy();
@@ -176,7 +176,7 @@ pub fn get_knight_moves(piece: u64) -> u64 {
     KNIGHT_MOVES[piece.trailing_zeros() as usize]
 }
 
-pub fn get_king_moves(piece: u64, turn: &board::Colour, board: &board::Board) -> u64 {
+pub fn get_king_moves(piece: u64, turn: board::Colour, board: &board::Board) -> u64 {
     // Castling moves
     let slide_moves = get_rook_moves(piece, board);
     let mut castle_moves = 0u64;

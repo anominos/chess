@@ -24,7 +24,7 @@ fn main() {
         Some(Command::Perft { depth }) => {
             let board = board::Board::default();
             let turn = board::Colour::W;
-            let result = perft(&board, &turn, depth);
+            let result = perft(&board, turn, depth);
             println!("perft result at depth={}, n={}", depth, result);
         }
         None => app(),
@@ -46,7 +46,7 @@ fn app() {
             "quit" | "exit" => break,
             "show" => println!("{}", board),
             "moves" => {
-                let moves = move_gen::gen_moves(&board, &turn);
+                let moves = move_gen::gen_moves(&board, turn);
                 for (from, to, promote) in move_gen::iter_moves(&moves, &board) {
                     print_move(from, to, promote);
                 }
@@ -66,7 +66,7 @@ fn app() {
                     "Q" => Some(board::Piece::Q),
                     _ => None,
                 };
-                if !(move_gen::iter_moves(&move_gen::gen_moves(&board, &turn), &board)
+                if !(move_gen::iter_moves(&move_gen::gen_moves(&board, turn), &board)
                     .any(|x| x == (from, to, promote)))
                 {
                     println!("Invalid move");
@@ -84,7 +84,7 @@ fn app() {
                 println!("Doing perft");
                 for i in 1..10 {
                     let start = std::time::Instant::now();
-                    let count = perft(&board, &turn, i);
+                    let count = perft(&board, turn, i);
                     println!("{} -> {}: {:#?}", i, count, start.elapsed());
                 }
             }
@@ -93,16 +93,16 @@ fn app() {
     }
 }
 
-fn perft(board: &board::Board, turn: &board::Colour, depth: u32) -> u64 {
+fn perft(board: &board::Board, turn: board::Colour, depth: u32) -> u64 {
     if depth == 0 {
         return 1;
     }
-    let moves = move_gen::gen_moves(&board, &turn);
+    let moves = move_gen::gen_moves(&board, turn);
     move_gen::iter_moves(&moves, &board)
         .par_bridge()
         .map(|(from, to, promote)| {
             let next = board.make_move(from, to, promote);
-            perft(&next, &turn.other(), depth - 1)
+            perft(&next, turn.other(), depth - 1)
         })
         .sum()
 }

@@ -25,7 +25,7 @@ impl Iterator for DFS {
             }
         }
         for (from, to, promote) in
-            move_gen::iter_moves(&move_gen::gen_moves(&board, &colour), &board)
+            move_gen::iter_moves(&move_gen::gen_moves(&board, colour), &board)
         {
             self.stack.push((
                 board.make_move(from, to, promote),
@@ -46,7 +46,7 @@ pub fn criterion_movegen(c: &mut Criterion) {
     c.bench_function("movegen", move |b| {
         b.iter_batched(
             || boards.next().unwrap(),
-            |pos| black_box(move_gen::gen_moves(&pos.board, &pos.colour)),
+            |pos| black_box(move_gen::gen_moves(&pos.board, pos.colour)),
             criterion::BatchSize::SmallInput,
         )
     });
@@ -67,7 +67,7 @@ pub fn criterion_pawns(c: &mut Criterion) {
             BenchmarkId::from_parameter(name),
             &(b, c, piece),
             |b, (board, col, piece)| {
-                b.iter(|| black_box(move_gen::get_pawn_moves(*piece, &col, &board)));
+                b.iter(|| black_box(move_gen::get_pawn_moves(*piece, *col, &board)));
             },
         );
     }
@@ -78,7 +78,7 @@ pub fn criterion_knights(c: &mut Criterion) {
     let mut group = c.benchmark_group("pawns");
     let (b, c) = board::Board::from_fen(fen).unwrap();
     group.bench_function("knight", |f| {
-        f.iter(|| black_box(move_gen::get_pawn_moves(sq, &c, &b)));
+        f.iter(|| black_box(move_gen::get_pawn_moves(sq, c, &b)));
     });
 }
 
