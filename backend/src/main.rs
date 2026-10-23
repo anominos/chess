@@ -155,3 +155,27 @@ fn print_bitboard(b: &u64) {
         println!("{:08b}", b >> ((7 - i) * 8) & 0xff);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_perft() {
+        for (fen, depth, ans) in [
+            (
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - - -",
+                5,
+                4865609,
+            ),
+            (
+                "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - - -",
+                5,
+                193690690,
+            ),
+            ("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", 7, 178633661),
+        ] {
+            let (board, colour) = board::Board::from_fen(fen).unwrap();
+            assert_eq!(perft(&board, colour, depth), ans);
+        }
+    }
+}
