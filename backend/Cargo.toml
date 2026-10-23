@@ -27,3 +27,6 @@ criterion = "0.8.2"
 [[bench]]
 name = "bench_movegen"
 harness = false
+[[bench]]
+name = "bench_pieces"
+harness = false
