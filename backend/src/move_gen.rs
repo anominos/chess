@@ -1,7 +1,7 @@
-use crate::board;
+use crate::board::{Board, Colour, Piece};
 use crate::consts::*;
 
-pub fn gen_moves(board: &board::Board, turn: board::Colour) -> [u64; 64] {
+pub fn gen_moves(board: &Board, turn: Colour) -> [u64; 64] {
     let mut pseudo = gen_pseudolegal_moves(&board, turn);
     // Make sure the move doesn't leave the king in check
     for (from, to, promote) in iter_moves(&pseudo.clone(), &board) {
@@ -9,9 +9,9 @@ pub fn gen_moves(board: &board::Board, turn: board::Colour) -> [u64; 64] {
         // attack set of opposition after move
         let atk_set = get_attack_set(&post_move, turn.other());
         let k_square = match turn {
-            board::Colour::W => post_move.w,
-            board::Colour::B => post_move.b,
-        }[board::Piece::K as usize];
+            Colour::W => post_move.w,
+            Colour::B => post_move.b,
+        }[Piece::K as usize];
         debug_assert!(k_square.count_ones() == 1);
         if atk_set & k_square != 0 {
             // This move leaves us in check, remove
@@ -23,9 +23,9 @@ pub fn gen_moves(board: &board::Board, turn: board::Colour) -> [u64; 64] {
     // Also invalidate if we are in check
     let atk_set = get_attack_set(&board, turn.other());
     match turn {
-        board::Colour::W => {
-            let in_check = (board.w[board::Piece::K as usize] & atk_set) != 0;
-            if board.w[board::Piece::K as usize] == E1 {
+        Colour::W => {
+            let in_check = (board.w[Piece::K as usize] & atk_set) != 0;
+            if board.w[Piece::K as usize] == E1 {
                 let k_idx = E1.trailing_zeros() as usize;
                 if in_check || ((pseudo[k_idx] & C1 != 0) && (pseudo[k_idx] & D1 == 0)) {
                     pseudo[k_idx] &= !C1;
@@ -35,9 +35,9 @@ pub fn gen_moves(board: &board::Board, turn: board::Colour) -> [u64; 64] {
                 }
             }
         }
-        board::Colour::B => {
-            let in_check = (board.b[board::Piece::K as usize] & atk_set) != 0;
-            if board.b[board::Piece::K as usize] == E8 {
+        Colour::B => {
+            let in_check = (board.b[Piece::K as usize] & atk_set) != 0;
+            if board.b[Piece::K as usize] == E8 {
                 let k_idx = E8.trailing_zeros() as usize;
                 if in_check || ((pseudo[k_idx] & C8 != 0) && (pseudo[k_idx] & D8 == 0)) {
                     pseudo[k_idx] &= !C8;
@@ -54,8 +54,8 @@ pub fn gen_moves(board: &board::Board, turn: board::Colour) -> [u64; 64] {
 
 pub fn iter_moves(
     moves: &[u64; 64],
-    board: &board::Board,
-) -> impl Iterator<Item = (u64, u64, Option<board::Piece>)> {
+    board: &Board,
+) -> impl Iterator<Item = (u64, u64, Option<Piece>)> {
     const R1: u64 = A1 | B1 | C1 | D1 | E1 | F1 | G1 | H1;
     const R8: u64 = A8 | B8 | C8 | D8 | E8 | F8 | G8 | H8;
     (0..64).flat_map(|sq| {
@@ -71,14 +71,14 @@ pub fn iter_moves(
             }
         })
         .flat_map(|(fr, to)| {
-            if (fr & board.w[board::Piece::P as usize] != 0 && to & R8 != 0)
-                || (fr & board.b[board::Piece::P as usize] != 0 && to & R1 != 0)
+            if (fr & board.w[Piece::P as usize] != 0 && to & R8 != 0)
+                || (fr & board.b[Piece::P as usize] != 0 && to & R1 != 0)
             {
                 [
-                    Some((fr, to, Some(board::Piece::Q))),
-                    Some((fr, to, Some(board::Piece::N))),
-                    Some((fr, to, Some(board::Piece::R))),
-                    Some((fr, to, Some(board::Piece::B))),
+                    Some((fr, to, Some(Piece::Q))),
+                    Some((fr, to, Some(Piece::N))),
+                    Some((fr, to, Some(Piece::R))),
+                    Some((fr, to, Some(Piece::B))),
                 ]
             } else {
                 [Some((fr, to, None)), None, None, None]
@@ -89,22 +89,22 @@ pub fn iter_moves(
     })
 }
 
-fn gen_pseudolegal_moves(board: &board::Board, turn: board::Colour) -> [u64; 64] {
+fn gen_pseudolegal_moves(board: &Board, turn: Colour) -> [u64; 64] {
     let mut moves = [0; 64];
     let exclude = match turn {
-        board::Colour::W => board.white(),
-        board::Colour::B => board.black(),
+        Colour::W => board.white(),
+        Colour::B => board.black(),
     };
     let occ = board.occupancy();
-    for p in board::Piece::PIECES {
+    for p in Piece::PIECES {
         for sq in board.squares_by_piece(&p, turn) {
             let possible_moves = match p {
-                board::Piece::P => get_pawn_moves(sq, turn, &board),
-                board::Piece::B => get_bishop_moves(sq, occ),
-                board::Piece::N => get_knight_moves(sq),
-                board::Piece::R => get_rook_moves(sq, occ),
-                board::Piece::Q => get_queen_moves(sq, occ),
-                board::Piece::K => get_king_moves(sq, turn, &board),
+                Piece::P => get_pawn_moves(sq, turn, &board),
+                Piece::B => get_bishop_moves(sq, occ),
+                Piece::N => get_knight_moves(sq),
+                Piece::R => get_rook_moves(sq, occ),
+                Piece::Q => get_queen_moves(sq, occ),
+                Piece::K => get_king_moves(sq, turn, &board),
             };
             // filter out self captures
             moves[sq.trailing_zeros() as usize] = possible_moves & !exclude;
@@ -113,58 +113,58 @@ fn gen_pseudolegal_moves(board: &board::Board, turn: board::Colour) -> [u64; 64]
     moves
 }
 
-pub fn get_attack_set(board: &board::Board, turn: board::Colour) -> u64 {
+pub fn get_attack_set(board: &Board, turn: Colour) -> u64 {
     const LEFT_MASK: u64 = 0x007F_7F7F_7F7F_7F00u64;
     const RIGHT_MASK: u64 = 0x00FE_FEFE_FEFE_FE00u64;
     let mut atks = 0;
     match turn {
-        board::Colour::W => {
-            atks |= (board.w[board::Piece::P as usize] & LEFT_MASK) << 9;
-            atks |= (board.w[board::Piece::P as usize] & RIGHT_MASK) << 7;
+        Colour::W => {
+            atks |= (board.w[Piece::P as usize] & LEFT_MASK) << 9;
+            atks |= (board.w[Piece::P as usize] & RIGHT_MASK) << 7;
         }
-        board::Colour::B => {
-            atks |= (board.b[board::Piece::P as usize] & LEFT_MASK) >> 7;
-            atks |= (board.b[board::Piece::P as usize] & RIGHT_MASK) >> 9;
+        Colour::B => {
+            atks |= (board.b[Piece::P as usize] & LEFT_MASK) >> 7;
+            atks |= (board.b[Piece::P as usize] & RIGHT_MASK) >> 9;
         }
     }
-    for sq in board.squares_by_piece(&board::Piece::N, turn) {
+    for sq in board.squares_by_piece(&Piece::N, turn) {
         atks |= get_knight_moves(sq);
     }
     let occ = board.occupancy();
-    for sq in board.squares_by_piece(&board::Piece::B, turn) {
+    for sq in board.squares_by_piece(&Piece::B, turn) {
         atks |= get_bishop_moves(sq, occ);
     }
-    for sq in board.squares_by_piece(&board::Piece::R, turn) {
+    for sq in board.squares_by_piece(&Piece::R, turn) {
         atks |= get_rook_moves(sq, occ);
     }
-    for sq in board.squares_by_piece(&board::Piece::Q, turn) {
+    for sq in board.squares_by_piece(&Piece::Q, turn) {
         atks |= get_queen_moves(sq, occ);
     }
-    for sq in board.squares_by_piece(&board::Piece::K, turn) {
+    for sq in board.squares_by_piece(&Piece::K, turn) {
         atks |= KING_MOVES[sq.trailing_zeros() as usize];
     }
     atks
 }
 
-pub fn get_pawn_moves(piece: u64, colour: board::Colour, board: &board::Board) -> u64 {
+pub fn get_pawn_moves(piece: u64, colour: Colour, board: &Board) -> u64 {
     let captures = match colour {
-        board::Colour::W => &WHITE_PAWN_CAPTURES,
-        board::Colour::B => &BLACK_PAWN_CAPTURES,
+        Colour::W => &WHITE_PAWN_CAPTURES,
+        Colour::B => &BLACK_PAWN_CAPTURES,
     };
     let sq_idx = piece.trailing_zeros() as usize;
     let row = sq_idx / 8;
     let mut moves = 0;
     if (1..7).contains(&row) {
         moves = match colour {
-            board::Colour::W => piece << 8,
-            board::Colour::B => piece >> 8,
+            Colour::W => piece << 8,
+            Colour::B => piece >> 8,
         } & !board.occupancy();
     }
-    if moves != 0 && colour == board::Colour::W && row == 1 {
+    if moves != 0 && colour == Colour::W && row == 1 {
         // no piece in the way, we are white and we are on the 2nd row,
         // add jump
         moves |= piece << 16 & !board.occupancy();
-    } else if moves != 0 && colour == board::Colour::B && row == 6 {
+    } else if moves != 0 && colour == Colour::B && row == 6 {
         // no piece in the way, we are black and we are on the 7th row,
         // add jump
         moves |= piece >> 16 & !board.occupancy();
@@ -176,24 +176,24 @@ pub fn get_knight_moves(piece: u64) -> u64 {
     KNIGHT_MOVES[piece.trailing_zeros() as usize]
 }
 
-pub fn get_king_moves(piece: u64, turn: board::Colour, board: &board::Board) -> u64 {
+pub fn get_king_moves(piece: u64, turn: Colour, board: &Board) -> u64 {
     // Castling moves
     let slide_moves = get_rook_moves(piece, board.occupancy());
     let mut castle_moves = 0u64;
     match turn {
-        board::Colour::W => {
-            if (board.castle_rights & board::Board::WQ) != 0 && (slide_moves & A1) != 0 {
+        Colour::W => {
+            if (board.castle_rights & Board::WQ) != 0 && (slide_moves & A1) != 0 {
                 castle_moves |= C1;
             }
-            if (board.castle_rights & board::Board::WK) != 0 && (slide_moves & H1) != 0 {
+            if (board.castle_rights & Board::WK) != 0 && (slide_moves & H1) != 0 {
                 castle_moves |= G1;
             }
         }
-        board::Colour::B => {
-            if (board.castle_rights & board::Board::BQ) != 0 && (slide_moves & A8) != 0 {
+        Colour::B => {
+            if (board.castle_rights & Board::BQ) != 0 && (slide_moves & A8) != 0 {
                 castle_moves |= C8;
             }
-            if (board.castle_rights & board::Board::BK) != 0 && (slide_moves & H8) != 0 {
+            if (board.castle_rights & Board::BK) != 0 && (slide_moves & H8) != 0 {
                 castle_moves |= G8;
             }
         }
