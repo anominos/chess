@@ -1,4 +1,4 @@
-use crate::consts::*;
+use crate::{consts::*, move_gen};
 use std::fmt;
 
 #[repr(usize)]
@@ -145,6 +145,15 @@ impl Board {
 
     pub fn occupancy(&self) -> u64 {
         self.white() | self.black()
+    }
+
+    pub fn in_check(&self, turn: Colour) -> bool {
+        (match turn {
+            Colour::W => self.w,
+            Colour::B => self.b,
+        }[Piece::K as usize])
+            & move_gen::get_attack_set(self, turn.other())
+            != 0
     }
 
     pub fn make_move(&self, from: u64, to: u64, promote: Option<Piece>) -> Self {

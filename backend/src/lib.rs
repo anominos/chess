@@ -3,4 +3,5 @@ pub mod consts {
     include!("generated/magics.rs");
 }
 pub mod board;
+pub mod engine;
 pub mod move_gen;

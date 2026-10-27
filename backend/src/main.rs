@@ -1,8 +1,9 @@
 use std::io;
 use std::io::Write;
 
-use backend::board;
+use backend::engine::eval::evaluate_board;
 use backend::move_gen;
+use backend::{board, engine::eval::evaluate};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use clap::{Parser, Subcommand};
@@ -87,6 +88,17 @@ fn app() {
                     let count = perft(&board, turn, i);
                     println!("{} -> {}: {:#?}", i, count, start.elapsed());
                 }
+            }
+            cmd if cmd.starts_with("eval ") => {
+                let parts: Vec<_> = cmd.split_whitespace().collect();
+                if parts.len() != 2 {
+                    println!("usage: eval <depth>");
+                    continue;
+                }
+                let depth = parts[1].parse::<u8>().unwrap();
+                println!("Depth={}", depth);
+                let eval = evaluate(&board, turn, depth);
+                println!("eval: {}", eval);
             }
             _ => println!("invalid command"),
         }
