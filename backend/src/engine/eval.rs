@@ -10,14 +10,10 @@ const PIECE_VALUES: [i32; 6] = [100, 300, 330, 500, 900, 20000];
 const MATE: i32 = 100_000;
 
 pub fn evaluate(board: &Board, turn: Colour, depth: u8) -> i32 {
-    let score = _evaluate(board, turn, depth, -MATE - 1, MATE + 1);
-    match turn {
-        Colour::W => score,
-        Colour::B => -score,
-    }
+    _evaluate(board, turn, depth, -MATE - 1, MATE + 1)
 }
 
-pub fn _evaluate(board: &Board, turn: Colour, depth: u8, mut alpha: i32, mut beta: i32) -> i32 {
+fn _evaluate(board: &Board, turn: Colour, depth: u8, mut alpha: i32, mut beta: i32) -> i32 {
     if depth == 0 {
         return match turn {
             Colour::W => evaluate_board(board),
@@ -51,7 +47,7 @@ pub fn _evaluate(board: &Board, turn: Colour, depth: u8, mut alpha: i32, mut bet
     alpha
 }
 
-pub fn evaluate_board(board: &Board) -> i32 {
+fn evaluate_board(board: &Board) -> i32 {
     let mut eval: i32 = 0;
     for piece in Piece::PIECES {
         let idx = piece as usize;

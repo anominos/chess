@@ -1,9 +1,7 @@
 use std::io;
 use std::io::Write;
 
-use backend::engine::eval::evaluate_board;
-use backend::move_gen;
-use backend::{board, engine::eval::evaluate};
+use backend::{board, engine, move_gen};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use clap::{Parser, Subcommand};
@@ -97,9 +95,30 @@ fn app() {
                 }
                 let depth = parts[1].parse::<u8>().unwrap();
                 println!("Depth={}", depth);
-                let eval = evaluate(&board, turn, depth);
+                let eval = engine::evaluate(&board, turn, depth);
+                let eval = match turn {
+                    board::Colour::W => eval,
+                    board::Colour::B => -eval,
+                };
                 println!("eval: {}", eval);
             }
+            "engine" => loop {
+                if let Some((from, to, promote)) = move_gen::iter_moves(
+                    &move_gen::gen_moves(&board, turn),
+                    &board,
+                )
+                .min_by_key(|(from, to, promote)| {
+                    engine::evaluate(&board.make_move(*from, *to, *promote), turn.other(), 5)
+                }) {
+                    board = board.make_move(from, to, promote);
+                    turn = turn.other();
+                    print_move(from, to, promote);
+                    println!("{}\n", board);
+                } else {
+                    println!("No moves available!");
+                    break;
+                }
+            },
             _ => println!("invalid command"),
         }
     }
