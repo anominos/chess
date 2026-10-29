@@ -36,8 +36,11 @@ pub struct Board {
     pub w: [u64; Piece::COUNT],
     pub b: [u64; Piece::COUNT],
     pub castle_rights: u8,
+    pub phase: u8,       // Essentially material count, used for early/late game heatmap
     pub en_passant: u64, // if last move was pawn jump, mark intermediate here
 }
+
+pub const PHASE_COUNT: [u8; Piece::COUNT] = [1, 3, 3, 5, 9, 0];
 
 impl Board {
     pub const WQ: u8 = 1u8 << 0;
@@ -50,6 +53,7 @@ impl Board {
             w: [255u64 << 8, B1 | G1, C1 | F1, A1 | H1, D1, E1],
             b: [255u64 << (6 * 8), B8 | G8, C8 | F8, A8 | H8, D8, E8],
             castle_rights: Self::WQ | Self::WK | Self::BQ | Self::BK,
+            phase: 39 * 2,
             en_passant: 0u64,
         }
     }
@@ -64,6 +68,7 @@ impl Board {
             w: [0; 6],
             b: [0; 6],
             castle_rights: 0,
+            phase: 0,
             en_passant: 0,
         };
 
@@ -80,15 +85,17 @@ impl Board {
                         &mut board.w
                     };
                     let sq = 1u64 << ((7 - row as u32) * 8 + col);
-                    match chr.to_ascii_lowercase() {
-                        'p' => arr[Piece::P as usize] |= sq,
-                        'n' => arr[Piece::N as usize] |= sq,
-                        'b' => arr[Piece::B as usize] |= sq,
-                        'r' => arr[Piece::R as usize] |= sq,
-                        'q' => arr[Piece::Q as usize] |= sq,
-                        'k' => arr[Piece::K as usize] |= sq,
+                    let piece = match chr.to_ascii_lowercase() {
+                        'p' => Piece::P as usize,
+                        'n' => Piece::N as usize,
+                        'b' => Piece::B as usize,
+                        'r' => Piece::R as usize,
+                        'q' => Piece::Q as usize,
+                        'k' => Piece::K as usize,
                         _ => return Err("invalid pieces"),
                     };
+                    arr[piece] |= sq;
+                    board.phase += PHASE_COUNT[piece];
                     col += 1;
                 }
             }
@@ -223,9 +230,10 @@ impl Board {
             // can remove both since the other square must be empty (opp just moved from there)
             fr_opp[Piece::P as usize] &= !(self.en_passant << 8 | self.en_passant >> 8);
         }
-        if let Some(b) = fr_opp.iter_mut().find(|b| **b & to != 0) {
+        if let Some(idx) = fr_opp.iter().position(|b| *b & to != 0) {
             // capture
-            *b = *b & !to;
+            fr_opp[idx] &= !to;
+            new_board.phase -= PHASE_COUNT[idx];
         }
         new_board.validate();
         new_board

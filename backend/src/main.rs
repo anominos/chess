@@ -112,8 +112,13 @@ fn app() {
                 }) {
                     board = board.make_move(from, to, promote);
                     turn = turn.other();
+                    let eval = engine::evaluate(&board, turn, 5);
+                    let eval = match turn {
+                        board::Colour::W => eval,
+                        board::Colour::B => -eval,
+                    };
                     print_move(from, to, promote);
-                    println!("{}\n", board);
+                    println!("{}{}\n", board, eval);
                 } else {
                     println!("No moves available!");
                     break;
