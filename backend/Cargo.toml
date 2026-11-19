@@ -7,6 +7,7 @@ default-run = "backend"
 [build-dependencies]
 proc-macro2 = { version = "1.0.107", default-features = false }
 quote = { version = "1.0.47", default-features = false }
+rand = "0.10.3"
 
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"] }

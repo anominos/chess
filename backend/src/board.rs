@@ -1,5 +1,5 @@
 use crate::{consts::*, move_gen};
-use std::fmt;
+use std::{fmt, iter::zip};
 
 #[repr(usize)]
 #[derive(PartialEq, Clone, Copy)]
@@ -253,6 +253,25 @@ impl Board {
                 Some(bit)
             }
         })
+    }
+
+    pub fn hash_pos(&self) -> u64 {
+        let mut hash: u64 = 0;
+        for i in 0..Piece::COUNT {
+            let mut mask = self.w[i];
+            while mask != 0 {
+                let idx = mask.trailing_zeros() as usize;
+                hash ^= ZOBRIST_TABLE_W[i][idx];
+                mask &= mask - 1;
+            }
+            let mut mask = self.b[i];
+            while mask != 0 {
+                let idx = mask.trailing_zeros() as usize;
+                hash ^= ZOBRIST_TABLE_B[i][idx];
+                mask &= mask - 1;
+            }
+        }
+        hash
     }
 
     #[cfg(debug_assertions)]

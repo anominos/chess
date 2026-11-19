@@ -1,5 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
+use rand::{RngExt, SeedableRng, rngs::SmallRng};
 use std::{env, fs, path::Path};
 
 fn main() {
@@ -12,6 +13,7 @@ fn main() {
     tokens.extend(gen_bishop_moves());
     tokens.extend(gen_rook_moves());
     tokens.extend(gen_pawns());
+    tokens.extend(gen_zobrist_hashes());
 
     fs::write(dst_path, tokens.to_string()).unwrap();
     println!("cargo::rerun-if-changed=build.rs");
@@ -194,5 +196,21 @@ fn gen_pawns() -> TokenStream {
         pub const BLACK_PAWN_MOVES: [u64; 64] = [#(#black_moves),*];
         #[allow(dead_code)]
         pub const BLACK_PAWN_CAPTURES: [u64; 64] = [#(#black_captures),*];
+    }
+}
+
+fn gen_zobrist_hashes() -> TokenStream {
+    let mut rng = SmallRng::seed_from_u64(1);
+    let white_table: [[u64; 64]; 6] = [[0u64; 64]; 6].map(|p| p.map(|_| rng.random()));
+    let black_table: [[u64; 64]; 6] = [[0u64; 64]; 6].map(|p| p.map(|_| rng.random()));
+    quote! {
+        #[allow(dead_code)]
+        pub const ZOBRIST_TABLE_W: [[u64; 64]; 6] = [
+            #([#(#white_table),*]),*
+        ];
+        #[allow(dead_code)]
+        pub const ZOBRIST_TABLE_B: [[u64; 64]; 6] = [
+            #([#(#black_table),*]),*
+        ];
     }
 }
