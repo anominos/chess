@@ -1,7 +1,7 @@
 use std::io;
 use std::io::Write;
 
-use backend::{board, engine, move_gen};
+use backend::{board, engine, game::Game, move_gen};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use clap::{Parser, Subcommand};
@@ -31,9 +31,8 @@ fn main() {
 }
 
 fn app() {
-    let mut board = board::Board::default();
-    let mut turn = board::Colour::W;
-    println!("{}", board);
+    let mut game = Game::default();
+    println!("{}", game);
     loop {
         print!("> ");
         io::stdout().flush().unwrap();
@@ -43,10 +42,10 @@ fn app() {
             .expect("failed to read user input");
         match input.trim() {
             "quit" | "exit" => break,
-            "show" => println!("{}", board),
+            "show" => println!("{}", game),
             "moves" => {
-                let moves = move_gen::gen_moves(&board, turn);
-                for (from, to, promote) in move_gen::iter_moves(&moves, &board) {
+                let moves = move_gen::gen_moves(&game.board, game.cur_turn);
+                for (from, to, promote) in move_gen::iter_moves(&moves, &game.board) {
                     print_move(from, to, promote);
                 }
             }
@@ -65,25 +64,27 @@ fn app() {
                     "Q" => Some(board::Piece::Q),
                     _ => None,
                 };
-                if !(move_gen::iter_moves(&move_gen::gen_moves(&board, turn), &board)
-                    .any(|x| x == (from, to, promote)))
+                if !(move_gen::iter_moves(
+                    &move_gen::gen_moves(&game.board, game.cur_turn),
+                    &game.board,
+                )
+                .any(|x| x == (from, to, promote)))
                 {
                     println!("Invalid move");
                     continue;
                 }
-                board = board.make_move(from, to, promote);
-                turn = turn.other();
-                println!("{}", board);
+                game.make_move(from, to, promote);
+                println!("{}", game);
             }
             cmd if cmd.starts_with("load ") => {
                 let fen = &cmd[5..];
-                (board, turn) = board::Board::from_fen(fen).unwrap();
+                game = Game::from_fen(fen).unwrap();
             }
             "perft" => {
                 println!("Doing perft");
                 for i in 1..10 {
                     let start = std::time::Instant::now();
-                    let count = perft(&board, turn, i);
+                    let count = perft(&game.board, game.cur_turn, i);
                     println!("{} -> {}: {:#?}", i, count, start.elapsed());
                 }
             }
@@ -95,8 +96,8 @@ fn app() {
                 }
                 let depth = parts[1].parse::<u8>().unwrap();
                 println!("Depth={}", depth);
-                let eval = engine::evaluate(&board, turn, depth);
-                let eval = match turn {
+                let eval = engine::evaluate(&game.board, game.cur_turn, depth);
+                let eval = match game.cur_turn {
                     board::Colour::W => eval,
                     board::Colour::B => -eval,
                 };
@@ -104,21 +105,24 @@ fn app() {
             }
             "engine" => loop {
                 if let Some((from, to, promote)) = move_gen::iter_moves(
-                    &move_gen::gen_moves(&board, turn),
-                    &board,
+                    &move_gen::gen_moves(&game.board, game.cur_turn),
+                    &game.board,
                 )
                 .min_by_key(|(from, to, promote)| {
-                    engine::evaluate(&board.make_move(*from, *to, *promote), turn.other(), 5)
+                    engine::evaluate(
+                        &game.board.make_move(*from, *to, *promote),
+                        game.cur_turn.other(),
+                        5,
+                    )
                 }) {
-                    board = board.make_move(from, to, promote);
-                    turn = turn.other();
-                    let eval = engine::evaluate(&board, turn, 5);
-                    let eval = match turn {
+                    game.make_move(from, to, promote);
+                    let eval = engine::evaluate(&game.board, game.cur_turn, 5);
+                    let eval = match game.cur_turn {
                         board::Colour::W => eval,
                         board::Colour::B => -eval,
                     };
                     print_move(from, to, promote);
-                    println!("{}{}\n", board, eval);
+                    println!("{}{}\n", game, eval);
                 } else {
                     println!("No moves available!");
                     break;

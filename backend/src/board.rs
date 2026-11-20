@@ -1,5 +1,5 @@
 use crate::{consts::*, move_gen};
-use std::{fmt, iter::zip};
+use std::fmt;
 
 #[repr(usize)]
 #[derive(PartialEq, Clone, Copy)]
